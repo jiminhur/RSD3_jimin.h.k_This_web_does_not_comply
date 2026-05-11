@@ -11,12 +11,12 @@ const FS  = 13;
 const FSL = 16;
 
 const STAGE_LIME=[
-  '#f0ffb0',  /* 0 game */
-  '#e6ff90',  /* 1 scroll */
-  '#d8ff60',  /* 2 selection */
-  '#ccff30',  /* 3 readability */
-  '#c2ff10',  /* 4 navigation */
-  '#ccff00',  /* 5 exit */
+  '#d8ff88',  /* 0 game       — soft lime-gray, but already clearly lime */
+  '#d2ff60',  /* 1 scroll     — slightly stronger */
+  '#ccff30',  /* 2 selection  — clearer lime presence */
+  '#c8ff10',  /* 3 readability — saturated lime */
+  '#c4ff00',  /* 4 navigation  — strong lime, close to final */
+  '#ccff00',  /* 5 exit        — vivid = top bar, unchanged */
 ];
 
 const PINK   = '#f5d8e0';
@@ -57,16 +57,23 @@ const DATA={
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   LOADER
+   LOADER — pure lime full screen, holds 2.5s, zooms inward + fades
 ═══════════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded',()=>{
-  const ldr=$('loader'),logo=$('ld-logo'),lm=$('ld-lime');
-  setTimeout(()=>logo.classList.add('vis'),100);
-  requestAnimationFrame(()=>requestAnimationFrame(()=>lm.classList.add('expanding')));
+  const ldr=$('loader');
+
+  /* After 2.5s: scale lime up slightly (zoom INTO the surface feel), fade out */
   setTimeout(()=>{
-    ldr.style.transition='opacity .4s';ldr.style.opacity='0';
-    setTimeout(()=>{ldr.style.display='none';startWebsite();},400);
-  },2000);
+    const lm=$('ld-lime');
+    if(lm){
+      lm.style.transition='transform 0.55s cubic-bezier(.4,0,.6,1), opacity 0.45s ease';
+      lm.style.transform='scale(1.14)';
+      lm.style.opacity='0';
+    }
+    ldr.style.transition='opacity 0.45s ease 0.1s';
+    ldr.style.opacity='0';
+    setTimeout(()=>{ldr.style.display='none';startWebsite();},560);
+  },2500);
 });
 
 function startWebsite(){
@@ -270,24 +277,25 @@ const UI_PY = (UI_BH - FS) / 2;  /* vertical centering of text */
 const UI_Y_OFF = 6;               /* gap between rect bottom and boxes */
 
 function drawUI(ctx,W,H,cmdText){
-  /* Geometry */
   const rectRight  = W*(RX_F+RW_F);
   const rectBottom = H*(RY_F+RH_F);
   const by = rectBottom + UI_Y_OFF;   /* BELOW the lime rect */
 
+  /* Single font declaration — both boxes use exactly the same FM(FS) */
   ctx.font=FM(FS);
+  ctx.textBaseline='top';
 
-  /* ── Lock box — right-aligned to rect right edge, below rect ── */
+  /* ── Lock box — sentence case, right-aligned to rect right edge ── */
   const elapsed=(performance.now()-stageEnteredAt)/1000;
   const rem=Math.max(0,LOCK_SEC-elapsed);
-  const lockTxt=rem>0?'LOCKED — '+Math.ceil(rem)+'s':'UNLOCKED';
+  const lockTxt=rem>0?'Locked — '+Math.ceil(rem)+'s':'Unlocked';
   const ltw=ctx.measureText(lockTxt).width;
   const lbw=ltw+UI_PX*2;
   const lbx=rectRight-lbw;
   ctx.fillStyle=RECT;ctx.fillRect(lbx,by,lbw,UI_BH);
-  ctx.fillStyle=BK;ctx.textBaseline='top';ctx.fillText(lockTxt,lbx+UI_PX,by+UI_PY);
+  ctx.fillStyle=BK;ctx.fillText(lockTxt,lbx+UI_PX,by+UI_PY);
 
-  /* ── Command box — centered below rect ── */
+  /* ── Command box — centered, same font, same height ── */
   const ctw=ctx.measureText(cmdText).width;
   const cbw=ctw+UI_PX*2;
   const cbx=W/2-cbw/2;
@@ -819,18 +827,23 @@ function renderNavigation(cv){
   const cx=MX-cvR.left,cy=MY-cvR.top;
   const lime=STAGE_LIME[4];
   const now=performance.now();
+
+  /* Measure paragraph width at FS */
   ctx.font=FM(FS);
   let maxW=0;NAV_LINES.forEach(l=>{maxW=Math.max(maxW,ctx.measureText(l).width);});
   const padX=16,padY=12,lineH=Math.round(FS*1.8);
   const blockW=Math.min(maxW+padX*2,W*RW_F);
   const blockH=NAV_LINES.length*lineH+padY*2;
-  /* Pink selection-style buttons */
+
+  /* Button geometry — sentence case, same FS, left-aligned to paragraph */
+  const btnTxt1='Return to previous page';
+  const btnTxt2='Skip to next page';
   const btnH=FS+16,btnGap=10;
-  const btn1W=ctx.measureText('RETURN TO PREVIOUS PAGE').width+UI_PX*2;
-  const btn2W=ctx.measureText('SKIP TO NEXT PAGE').width+UI_PX*2;
+  /* Each button: exactly half the block width minus gap */
+  const halfW=(blockW-btnGap)/2;
   const totalH=blockH+btnGap+btnH;
 
-  /* Top-left tracks cursor */
+  /* Top-left of module tracks cursor — whole block slides together */
   if(cx>0){DATA.nav.vx+=(cx-DATA.nav.x)*0.052;DATA.nav.vy+=(cy-DATA.nav.y)*0.052;}
   else{DATA.nav.vx+=(W*RX_F-DATA.nav.x)*0.04;DATA.nav.vy+=(H*RY_F-DATA.nav.y)*0.04;}
   DATA.nav.vx*=0.74;DATA.nav.vy*=0.74;
@@ -844,14 +857,14 @@ function renderNavigation(cv){
   if(DATA.nav.trails.length>60) DATA.nav.trails.shift();
   DATA.nav.trails.forEach(tr=>{
     const age=(now-tr.born)/3500;
-    const alpha=Math.max(0,0.25-age*0.25);
+    const alpha=Math.max(0,0.22-age*0.22);
     ctx.save();ctx.globalAlpha=alpha;
     ctx.strokeStyle=lime;ctx.lineWidth=1;
     ctx.strokeRect(tr.x,tr.y,blockW,blockH);
     ctx.restore();
   });
 
-  /* Paragraph */
+  /* Paragraph block */
   ctx.fillStyle=lime;ctx.fillRect(DATA.nav.x,DATA.nav.y,blockW,blockH);
   ctx.font=FM(FS);ctx.fillStyle=BK;ctx.textBaseline='top';
   NAV_LINES.forEach((line,i)=>{
@@ -860,18 +873,27 @@ function renderNavigation(cv){
     else ctx.fillText(line,DATA.nav.x+padX,DATA.nav.y+padY+i*lineH);
   });
 
-  /* Buttons — PINK, same style as selection boxes, both sized equally, left-aligned to block */
+  /* Buttons — pale pink, sentence case, FS, left-aligned to block left edge */
   const btnY=DATA.nav.y+blockH+btnGap;
   const bpy2=(btnH-FS)/2;
-  /* Each button is exactly half the block width minus half gap */
-  const halfW=(blockW-btnGap)/2;
-  /* RETURN TO PREVIOUS PAGE — left half */
+  ctx.font=FM(FS);
+
+  /* BUTTON 1: left edge = DATA.nav.x (same as paragraph) */
   ctx.fillStyle=PINK;ctx.fillRect(DATA.nav.x,btnY,halfW,btnH);
-  ctx.fillStyle=BK;ctx.font=FM(FS);ctx.textBaseline='top';
-  ctx.fillText('RETURN TO PREVIOUS PAGE',DATA.nav.x+UI_PX,btnY+bpy2);
-  /* SKIP TO NEXT PAGE — right half */
-  ctx.fillStyle=PINK;ctx.fillRect(DATA.nav.x+halfW+btnGap,btnY,halfW,btnH);
-  ctx.fillText('SKIP TO NEXT PAGE',DATA.nav.x+halfW+btnGap+UI_PX,btnY+bpy2);
+  ctx.save();
+  ctx.beginPath();ctx.rect(DATA.nav.x,btnY,halfW,btnH);ctx.clip();
+  ctx.fillStyle=BK;ctx.textBaseline='top';
+  ctx.fillText(btnTxt1,DATA.nav.x+UI_PX,btnY+bpy2);
+  ctx.restore();
+
+  /* BUTTON 2: left edge = DATA.nav.x + halfW + gap */
+  const btn2X=DATA.nav.x+halfW+btnGap;
+  ctx.fillStyle=PINK;ctx.fillRect(btn2X,btnY,halfW,btnH);
+  ctx.save();
+  ctx.beginPath();ctx.rect(btn2X,btnY,halfW,btnH);ctx.clip();
+  ctx.fillStyle=BK;ctx.textBaseline='top';
+  ctx.fillText(btnTxt2,btn2X+UI_PX,btnY+bpy2);
+  ctx.restore();
 
   cmdBox(ctx,W,H,'NAVIGATION — movement !== access');
   xhair(ctx,cv);
@@ -902,25 +924,29 @@ function updateExit(){
   if(!$('btn-exit')) return;
   const be=$('btn-exit'),bs=$('btn-stay');
 
-  /* EXIT — left-edge hinge, folds inward dramatically */
+  /* EXIT — left-edge hinge. Folds AWAY from viewer (door opens inward into depth).
+     rotateY negative = left side moves away. translateZ negative = recedes. */
   const beR=be.getBoundingClientRect();
   const beD=MX>0?Math.hypot(beR.left+beR.width/2-MX,beR.top+beR.height/2-MY):999;
   const eFold=MX>0&&beD<220?Math.max(0,(220-beD)/220):0;
   DATA.exit.efold=lerp(DATA.exit.efold,eFold,0.10);
-  const eAng=DATA.exit.efold*-88;  /* nearly 90deg — spatial door */
+  /* Fold inward: rotateY goes negative (left hinge, right side recedes away).
+     translateZ stays negative — always pushes into depth, never toward viewer. */
+  const eAng=DATA.exit.efold*-82;
   be.style.transformOrigin='left center';
   be.style.transition='transform .06s linear';
-  be.style.transform=`perspective(500px) rotateY(${eAng}deg) translateZ(${DATA.exit.efold*-60}px) scaleY(${1-DATA.exit.efold*0.08})`;
+  be.style.transform=`perspective(700px) rotateY(${eAng}deg) translateZ(${DATA.exit.efold*-80}px)`;
 
-  /* STAY — right-edge hinge, opposite fold */
+  /* STAY — right-edge hinge. Folds AWAY from viewer in opposite direction. */
   const bsR=bs.getBoundingClientRect();
   const bsD=MX>0?Math.hypot(bsR.left+bsR.width/2-MX,bsR.top+bsR.height/2-MY):999;
   const sFold=MX>0&&bsD<220?Math.max(0,(220-bsD)/220):0;
   DATA.exit.sfold=lerp(DATA.exit.sfold,sFold,0.10);
-  const sAng=DATA.exit.sfold*88;
+  /* Right hinge: rotateY positive folds right side away into depth. */
+  const sAng=DATA.exit.sfold*82;
   bs.style.transformOrigin='right center';
   bs.style.transition='transform .06s linear';
-  bs.style.transform=`perspective(500px) rotateY(${sAng}deg) translateZ(${DATA.exit.sfold*-60}px) scaleY(${1-DATA.exit.sfold*0.08})`;
+  bs.style.transform=`perspective(700px) rotateY(${sAng}deg) translateZ(${DATA.exit.sfold*-80}px)`;
 }
 
 function renderExit(cv){
