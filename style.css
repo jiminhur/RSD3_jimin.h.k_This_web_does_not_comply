@@ -87,41 +87,23 @@ html,body{
 }
 .cw:hover,.cw.active{background:var(--bk);color:var(--lime);}
 
-/* ══ LOCK INDICATOR — bottom right ══ */
-#lock-ind{
-  position:fixed;bottom:18px;right:18px;
-  z-index:7000;background:var(--rect);
-  padding:8px 16px;display:flex;align-items:center;gap:12px;
-  pointer-events:none;white-space:nowrap;
-}
-#lock-label{
-  font-family:var(--mon);font-size:var(--fs);letter-spacing:.1em;
-  text-transform:uppercase;color:var(--bk);font-weight:500;
-}
-#lock-bar{width:64px;height:1.5px;background:rgba(17,17,17,.14);position:relative;}
-#lock-fill{
-  position:absolute;top:0;left:0;height:100%;width:0;
-  background:var(--bk);transition:width .1s linear;
-}
-#lock-time{
-  font-family:var(--mon);font-size:var(--fs);letter-spacing:.06em;
-  color:var(--bk);font-variant-numeric:tabular-nums;font-weight:500;
-}
+/* ══ LOCK INDICATOR — hidden; lock timer now drawn on canvas ══ */
+#lock-ind{display:none!important;}
 
-/* ══ YOU FAILED ══ */
+/* ══ YOU FAILED — smaller, cold, quiet ══ */
 #failed-msg{
   position:fixed;inset:0;z-index:8500;
-  background:rgba(17,17,17,.3);
+  background:rgba(17,17,17,.22);
   display:flex;align-items:center;justify-content:center;
   pointer-events:none;animation:failedAnim .55s ease forwards;
 }
 @keyframes failedAnim{0%{opacity:0;}12%{opacity:1;}75%{opacity:1;}100%{opacity:0;}}
 #failed-inner{
   font-family:var(--harber);
-  font-size:clamp(24px,3.8vw,46px);
+  font-size:clamp(16px,2.2vw,28px);   /* much smaller */
   letter-spacing:.14em;text-transform:uppercase;
   color:var(--rect);font-weight:500;
-  background:var(--bk);padding:12px 28px;
+  background:var(--bk);padding:9px 22px;
 }
 
 /* ══ SCROLL CONTAINER ══ */
