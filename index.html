@@ -7,63 +7,54 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body data-stage="0">
-
 <!-- ═══ LOADER — lime expand + zoom ═══ -->
 <div id="loader">
-  <!-- Lime rectangle that expands 0→100% -->
-  <div id="ld-lime"></div>
-  <img id="ld-logo" src="This_Web_Does_Not_Comply_logo.png" alt="">
+<!-- Lime rectangle that expands 0→100% -->
+<div id="ld-lime"></div>
+<img id="ld-logo" src="This_Web_Does_Not_Comply_logo.png" alt="">
 </div>
-
 <!-- ═══ TOP BAR ═══ -->
 <header id="bar" class="hide">
-  <span class="bar-title">THIS WEB DOES NOT COMPLY</span>
-  <span class="bar-sep">—</span>
-  <span class="cw" data-stage="1">SCROLLING</span>
-  <span class="bc">·</span>
-  <span class="cw" data-stage="2">SELECTION</span>
-  <span class="bc">·</span>
-  <span class="cw" data-stage="3">READABILITY</span>
-  <span class="bc">·</span>
-  <span class="cw" data-stage="4">NAVIGATION</span>
-  <span class="bc">·</span>
-  <span class="cw" data-stage="5">EXIT</span>
+<span class="bar-title">THIS WEB DOES NOT COMPLY</span>
+<span class="bar-sep">—</span>
+<span class="cw" data-stage="1">SCROLLING</span>
+<span class="bc">·</span>
+<span class="cw" data-stage="2">SELECTION</span>
+<span class="bc">·</span>
+<span class="cw" data-stage="3">READABILITY</span>
+<span class="bc">·</span>
+<span class="cw" data-stage="4">NAVIGATION</span>
+<span class="bc">·</span>
+<span class="cw" data-stage="5">EXIT</span>
 </header>
-
 <!-- ═══ LOCK INDICATOR — bottom right ═══ -->
 <div id="lock-ind" class="hide">
-  <span id="lock-label">LOCKED</span>
-  <div id="lock-bar"><div id="lock-fill"></div></div>
-  <span id="lock-time">15s</span>
+<span id="lock-label">LOCKED</span>
+<div id="lock-bar"><div id="lock-fill"></div></div>
+<span id="lock-time">15s</span>
 </div>
-
 <!-- ═══ YOU FAILED ═══ -->
 <div id="failed-msg" class="hide">
-  <span id="failed-inner">YOU FAILED</span>
+<span id="failed-inner">YOU FAILED</span>
 </div>
-
 <!-- ═══ SCROLL CONTAINER ═══ -->
 <div id="sc" class="hide">
-  <div id="tall">
-    <!-- Stages injected by JS (exit at top, scrolling near bottom) -->
-    <div id="dyn"></div>
-
-    <!-- GAME SECTION — first stage the user sees -->
-    <section id="s-game" class="game-sec">
-      <canvas id="cv-game" class="full-cv"></canvas>
-    </section>
-
-    <!-- BOTTOM — unchanged from original -->
-    <section id="s-bottom" class="bottom-sec">
-      <img src="Main_bottom.jpg" class="sec-bg" alt="">
-      <img src="Main_bottom_error.jpg" class="sec-bg bottom-err" alt="">
-    </section>
-  </div>
+<div id="tall">
+<!-- Stages injected by JS (exit at top, scrolling near bottom) -->
+<div id="dyn"></div>
+<!-- GAME SECTION — first stage the user sees -->
+<section id="s-game" class="game-sec">
+<canvas id="cv-game" class="full-cv"></canvas>
+</section>
+<!-- BOTTOM — unchanged from original -->
+<section id="s-bottom" class="bottom-sec">
+<img src="Main_bottom.jpg" class="sec-bg" alt="">
+<img src="Main_bottom_error.jpg" class="sec-bg bottom-err" alt="">
+</section>
 </div>
-
+</div>
 <!-- ═══ MAGNIFIER CURSOR ═══ -->
 <div id="mag"><div id="mag-ring"></div></div>
-
 <script src="script.js"></script>
 </body>
 </html>
