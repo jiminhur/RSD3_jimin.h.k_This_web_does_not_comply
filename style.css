@@ -40,31 +40,20 @@ html,body{
 }
 .hide{display:none!important;}
 
-/* ══ LOADER — lime rectangle expanding from center ══ */
+/* ══ LOADER — pure lime full screen, zooms inward then fades ══ */
 #loader{
   position:fixed;inset:0;z-index:50000;
-  background:var(--bg);
-  display:flex;align-items:center;justify-content:center;
+  background:#ccff00;   /* start as full vivid lime — no image needed */
+  overflow:hidden;
 }
 #ld-lime{
-  position:absolute;
-  width:0;height:0;
-  background:var(--lime);
-  left:50%;top:50%;
-  transform:translate(-50%,-50%);
-  /* Animation: expand to full screen in 1.8s */
-  transition:width 1.8s cubic-bezier(.16,1,.3,1), height 1.8s cubic-bezier(.16,1,.3,1);
+  position:absolute;inset:0;
+  background:#ccff00;
+  /* Already full screen — transform scales it for the zoom-in feel */
+  transform-origin:center center;
 }
-#ld-lime.expanding{
-  width:110vw;height:110vh;
-}
-#ld-logo{
-  position:absolute;
-  width:clamp(200px,36vw,480px);
-  z-index:5;opacity:0;
-  transition:opacity .5s;pointer-events:none;
-}
-#ld-logo.vis{opacity:1;}
+/* Logo hidden — loader is purely lime, no image asset */
+#ld-logo{display:none!important;}
 
 /* ══ TOP BAR ══ */
 #bar{
