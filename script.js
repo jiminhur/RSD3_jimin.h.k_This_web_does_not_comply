@@ -328,14 +328,14 @@ function wireGame(){
 function buildGrid(cv){
   const W=cv.parentElement.offsetWidth||window.innerWidth;
   const H=cv.parentElement.offsetHeight||window.innerHeight;
-  const SZ=16;
-  /* Board fills the lime rect exactly */
+  const SZ=14;  /* smaller tiles = denser fill */
   const boardX=Math.round(W*RX_F);
   const boardY=Math.round(H*RY_F);
   const boardW=Math.round(W*RW_F);
   const boardH=Math.round(H*RH_F);
-  const cols=Math.floor(boardW/SZ);
-  const rows=Math.floor(boardH/SZ);
+  /* +2 rows/cols to guarantee full coverage — clip handles overflow */
+  const cols=Math.floor(boardW/SZ)+2;
+  const rows=Math.floor(boardH/SZ)+2;
   DATA.game.cols=cols;DATA.game.rows=rows;DATA.game.cellSz=SZ;
   DATA.game.boardX=boardX;DATA.game.boardY=boardY;
   DATA.game.boardW=boardW;DATA.game.boardH=boardH;
@@ -465,6 +465,31 @@ Perceived movement in this interface does not indicate a change in state.
 content.render(next_fragment) returns void. scroll.guarantee(null).
 position.delta===0. Scrolling in this system does not constitute progress.
 scroll.input.recorded() — scroll.locked === true — loop: infinite
+viewport.position += deltaY — result: null — content.render: void
+scroll.input.recorded() — advancement: null — position.unchanged()
+viewport.position += deltaY — result: null — scroll.guarantee(null)
+content.render(next_fragment) — returned: void — overflow: current_position
+scroll.locked === true — advancement: null — position.delta===0
+scroll.expected(progress) — scroll.actual(repetition) — loop: infinite
+The system has received a scroll input. This input has been forwarded.
+scroll.guarantee(null). position.delta===0. viewport.reposition: none.
+By continuing to scroll the user acknowledges the system refuses progress.
+scroll.input.recorded() — scroll.locked === true — advancement: null
+viewport.position += deltaY — result: null — content.render: void
+overflow.return(current_position) — perceived movement: not state change
+scroll.expected(progress) — scroll.actual(repetition) — loop continues
+position.unchanged() — advancement: null — scroll.guarantee(null)
+scroll.offset(update) — viewport.reposition(active_content): rejected
+scroll.locked === true — user.request(content.advance): rejected
+The interface reserves the right to reposition content without notice.
+scroll.guarantee(null). position.delta===0. content.advance: void.
+viewport.position += deltaY — result: null — content.render: void
+scroll.input.recorded() — loop: infinite — advancement: null
+scroll.locked === true — user.request(advance): rejected — delta===0
+Perceived movement does not indicate a change of state. scroll.locked===true.
+content.render(next_fragment) returns void. scroll.guarantee(null).
+position.delta===0. Scrolling in this system does not constitute progress.
+scroll.input.recorded() — scroll.locked === true — loop: infinite
 viewport.position += deltaY — result: null — content.render: void`;
 
 const SCROLL_LINES=SCROLL_BASE.split('\n');
@@ -473,62 +498,58 @@ const COL1=SCROLL_LINES.slice(0,HALF_S);
 const COL2=SCROLL_LINES.slice(HALF_S);
 
 function initScrolling(){DATA.scroll.offset=0;DATA.scroll.vel=0;DATA.scroll.inited=true;}
-function feedScroll(dy){DATA.scroll.vel+=dy*0.75;}
+function feedScroll(dy){DATA.scroll.vel+=dy*1.1;}  /* boosted velocity */
 
 function renderScrolling(cv){
   const r=sz(cv);if(!r) return;
   const {ctx,W,H}=r;ctx.clearRect(0,0,W,H);
   drawBg(ctx,W,H,1);
 
-  DATA.scroll.vel*=0.83;
+  DATA.scroll.vel*=0.82;
   DATA.scroll.offset+=DATA.scroll.vel;
-  DATA.scroll.offset=clamp(DATA.scroll.offset,-H*1.2,H*1.2);
-  DATA.scroll.offset*=0.96;
+  DATA.scroll.offset=clamp(DATA.scroll.offset,-H*1.6,H*1.6);
+  DATA.scroll.offset*=0.97;
 
   const pull=DATA.scroll.offset;
   const absP=Math.abs(pull);
 
   const px=W*RX_F,py=H*RY_F,pw=W*RW_F,ph=H*RH_F;
   const colW=(pw-32)/2;
-  const lineH=Math.round(FS*1.6);
-  /* Text starts 18px from top of rect */
-  const textStartY=py+18;
+  const lineH=Math.round(FS*1.55);
+  const textStartY=py+14;
 
-  /* Hard clip to lime rect — nothing escapes */
+  /* Hard clip — nothing escapes the lime rect */
   ctx.save();ctx.beginPath();ctx.rect(px,py,pw,ph);ctx.clip();
 
   ctx.font=FM(FS);ctx.fillStyle=BK;ctx.textBaseline='top';
 
-  /* ── Per-line spatial displacement ──
-     Each line has a unique Z-depth phase.
-     At rest: normal paragraph. While scrolling: each line shifts
-     independently in X, Y and scale — revealing hidden depth layers.
-     Large |pull| → some lines scale to screen-filling size.
-     NO opacity ever. All displacement from position + scale + skew. */
+  /* Per-line violent Z-depth spatial displacement.
+     dp ∈ [-1,+1] per line: +1 = explodes toward viewer, -1 = collapses deep.
+     At rest: normal flat paragraph.
+     While scrolling: some lines grow to fill entire screen,
+     others shrink to near-invisible specks, X parallax is extreme.
+     NO opacity — pure position + scale + skew. */
   const drawSpatialCol=(lines,baseX)=>{
     lines.forEach((line,i)=>{
-      /* Each line has a unique Z-depth phase — sinusoidal per-line */
       const dp=Math.sin(i*0.53+0.8)*Math.cos(i*0.29);
-      /* dp ranges -1..1. Lines near +1 explode toward viewer, near -1 collapse back. */
 
-      /* Scale: at large pull, dp=+1 lines blow up massively (fills screen), dp=-1 shrink tiny */
-      /* Max scale at full pull ~H/lineH (one line fills height) */
-      const maxScale = absP > 20 ? 1 + (absP/H)*8*Math.max(0,dp) : 1;
-      const minScale = Math.max(0.04, 1 - absP*0.008*Math.max(0,-dp));
-      const sc = dp >= 0 ? maxScale : minScale;
+      /* SCALE: violent. dp=+1 at full pull fills ~4× the screen height */
+      const maxSc = absP > 10 ? 1 + (absP/H)*18*Math.max(0,dp) : 1;
+      const minSc = Math.max(0.02, 1 - absP*0.014*Math.max(0,-dp));
+      const sc = dp >= 0 ? maxSc : minSc;
 
-      /* X displacement: heavy parallax — foreground lines shift far left/right */
-      const dx = pull * dp * 0.55 + absP * Math.sin(i*0.37+1.1) * 0.09 * Math.sign(pull);
+      /* X: extreme parallax — foreground lines fly left/right violently */
+      const dx = pull*dp*1.1 + absP*Math.sin(i*0.37+1.1)*0.18*Math.sign(pull||1);
 
-      /* Y: each line's depth shifts its Y position independently */
-      const dy = textStartY + i*lineH + pull*(0.65 + dp*0.5);
+      /* Y: lines shift vertically by their depth plane */
+      const dy = textStartY + i*lineH + pull*(0.72 + dp*0.6);
 
-      /* Skew: misregistration feel — stronger at large pull */
-      const skew = pull * dp * 0.004;
+      /* Skew: heavy misregistration at high pull */
+      const skew = pull*dp*0.008;
 
       ctx.save();
-      ctx.translate(baseX + dx, dy);
-      ctx.scale(sc, sc);
+      ctx.translate(baseX+dx, dy);
+      ctx.scale(sc,sc);
       if(Math.abs(skew)>0.0001) ctx.transform(1,0,skew/sc,1,0,0);
       ctx.fillText(line,0,0);
       ctx.restore();
@@ -538,7 +559,7 @@ function renderScrolling(cv){
   drawSpatialCol(COL1,px+16);
   drawSpatialCol(COL2,px+colW+24);
 
-  ctx.restore(); /* end clip */
+  ctx.restore();
   cmdBox(ctx,W,H,'SCROLL_LOCKED = true');
   xhair(ctx,cv);
 }
@@ -590,17 +611,18 @@ function onSelClick(cx,cy){
   const H=cv.parentElement.offsetHeight||window.innerHeight;
   const px=hit?hit.x+(hit.w||80)/2:W/2,py=hit?hit.y:H/2;
   const pl=hit?hit.label:'';
-  /* Aggressive growth: 10 / 24 / 40+ per click */
-  const count=DATA.sel.clicks===1?10:DATA.sel.clicks===2?24:Math.min(50,18+DATA.sel.clicks*9);
+  /* Viral growth: 20 / 50 / 80+ per click — screen fills in 4 clicks */
+  const count=DATA.sel.clicks===1?20:DATA.sel.clicks===2?50:Math.min(80,30+DATA.sel.clicks*18);
   const golden=Math.PI*(3-Math.sqrt(5));
   for(let i=0;i<count;i++){
-    const ang=i*golden+rnd(-0.35,0.35);
-    const dist=rnd(160,440);  /* very wide */
+    const ang=i*golden+rnd(-0.4,0.4);
+    /* Wide spread: up to 600px radius — fills entire canvas */
+    const dist=rnd(80,600);
     addSelNode(px+Math.cos(ang)*dist,py+Math.sin(ang)*dist,hit?.id??null,pl+(i+1),false);
   }
-  /* Soft cap — preserve existing nodes, only trim oldest overflow */
-  if(DATA.sel.nodes.length>600) DATA.sel.nodes.splice(SEED.length,30);
-  if(DATA.sel.edges.length>700) DATA.sel.edges.splice(0,30);
+  /* Very high cap — nodes accumulate aggressively */
+  if(DATA.sel.nodes.length>1000) DATA.sel.nodes.splice(SEED.length,20);
+  if(DATA.sel.edges.length>1200) DATA.sel.edges.splice(0,20);
 }
 
 function renderSelection(cv){
@@ -710,14 +732,24 @@ function initReadability(){
     if(activeStage!==3) return;
     for(let i=0;i<Math.floor(rnd(4,8));i++){
       const idx=Math.floor(Math.random()*DATA.read.words.length);
+      /* Direction: pick from all quadrants — left/right/up/down/diagonal */
+      const dirAngle=rnd(0,Math.PI*2);
+      const dirDist=rnd(180,420);
       DATA.read.eruptions.push({
-        wordIdx:idx,targetFs:rnd(110,320),targetSX:rnd(2,6),targetSY:rnd(1.5,5),
-        targetSkew:rnd(-0.6,0.6),targetOx:rnd(-360,360),targetOy:rnd(-220,140),
-        born:performance.now(),dur:rnd(380,1300)
+        wordIdx:idx,
+        targetFs:rnd(90,380),      /* wider range — some huge, some small */
+        targetSX:rnd(0.3,7),       /* can also shrink (0.3) or explode (7) */
+        targetSY:rnd(0.2,6),
+        targetSkew:rnd(-0.7,0.7),
+        /* All directions: left, right, up, down, diagonal */
+        targetOx:Math.cos(dirAngle)*dirDist,
+        targetOy:Math.sin(dirAngle)*dirDist,
+        born:performance.now(),
+        dur:rnd(350,1400)
       });
     }
-    if(DATA.read.eruptions.length>24) DATA.read.eruptions.splice(0,DATA.read.eruptions.length-24);
-  },480);
+    if(DATA.read.eruptions.length>28) DATA.read.eruptions.splice(0,DATA.read.eruptions.length-28);
+  },420);
 }
 
 function renderReadability(cv){
@@ -828,14 +860,18 @@ function renderNavigation(cv){
     else ctx.fillText(line,DATA.nav.x+padX,DATA.nav.y+padY+i*lineH);
   });
 
-  /* Buttons — PINK, same style as selection boxes */
+  /* Buttons — PINK, same style as selection boxes, both sized equally, left-aligned to block */
   const btnY=DATA.nav.y+blockH+btnGap;
   const bpy2=(btnH-FS)/2;
-  ctx.fillStyle=PINK;ctx.fillRect(DATA.nav.x,btnY,btn1W,btnH);
-  ctx.fillStyle=BK;ctx.textBaseline='top';
+  /* Each button is exactly half the block width minus half gap */
+  const halfW=(blockW-btnGap)/2;
+  /* RETURN TO PREVIOUS PAGE — left half */
+  ctx.fillStyle=PINK;ctx.fillRect(DATA.nav.x,btnY,halfW,btnH);
+  ctx.fillStyle=BK;ctx.font=FM(FS);ctx.textBaseline='top';
   ctx.fillText('RETURN TO PREVIOUS PAGE',DATA.nav.x+UI_PX,btnY+bpy2);
-  ctx.fillStyle=PINK;ctx.fillRect(DATA.nav.x+btn1W+btnGap,btnY,btn2W,btnH);
-  ctx.fillText('SKIP TO NEXT PAGE',DATA.nav.x+btn1W+btnGap+UI_PX,btnY+bpy2);
+  /* SKIP TO NEXT PAGE — right half */
+  ctx.fillStyle=PINK;ctx.fillRect(DATA.nav.x+halfW+btnGap,btnY,halfW,btnH);
+  ctx.fillText('SKIP TO NEXT PAGE',DATA.nav.x+halfW+btnGap+UI_PX,btnY+bpy2);
 
   cmdBox(ctx,W,H,'NAVIGATION — movement !== access');
   xhair(ctx,cv);
@@ -864,30 +900,27 @@ function wireExitButtons(){
 
 function updateExit(){
   if(!$('btn-exit')) return;
-
-  /* Measure cursor relative to each button */
   const be=$('btn-exit'),bs=$('btn-stay');
 
-  /* EXIT — left-edge hinge fold */
+  /* EXIT — left-edge hinge, folds inward dramatically */
   const beR=be.getBoundingClientRect();
   const beD=MX>0?Math.hypot(beR.left+beR.width/2-MX,beR.top+beR.height/2-MY):999;
-  const eFold=MX>0&&beD<180?Math.max(0,(180-beD)/180):0;
-  DATA.exit.efold=lerp(DATA.exit.efold,eFold,0.12);
-  const eAng=DATA.exit.efold*-72; /* fold inward up to -72deg */
-  /* Transform-origin left center = hinge at left edge */
+  const eFold=MX>0&&beD<220?Math.max(0,(220-beD)/220):0;
+  DATA.exit.efold=lerp(DATA.exit.efold,eFold,0.10);
+  const eAng=DATA.exit.efold*-88;  /* nearly 90deg — spatial door */
   be.style.transformOrigin='left center';
-  be.style.transition='transform .08s linear';
-  be.style.transform=`perspective(600px) rotateY(${eAng}deg) translateZ(${DATA.exit.efold*-30}px)`;
+  be.style.transition='transform .06s linear';
+  be.style.transform=`perspective(500px) rotateY(${eAng}deg) translateZ(${DATA.exit.efold*-60}px) scaleY(${1-DATA.exit.efold*0.08})`;
 
-  /* STAY — right-edge hinge fold */
+  /* STAY — right-edge hinge, opposite fold */
   const bsR=bs.getBoundingClientRect();
   const bsD=MX>0?Math.hypot(bsR.left+bsR.width/2-MX,bsR.top+bsR.height/2-MY):999;
-  const sFold=MX>0&&bsD<180?Math.max(0,(180-bsD)/180):0;
-  DATA.exit.sfold=lerp(DATA.exit.sfold,sFold,0.12);
-  const sAng=DATA.exit.sfold*72; /* fold inward up to +72deg */
+  const sFold=MX>0&&bsD<220?Math.max(0,(220-bsD)/220):0;
+  DATA.exit.sfold=lerp(DATA.exit.sfold,sFold,0.10);
+  const sAng=DATA.exit.sfold*88;
   bs.style.transformOrigin='right center';
-  bs.style.transition='transform .08s linear';
-  bs.style.transform=`perspective(600px) rotateY(${sAng}deg) translateZ(${DATA.exit.sfold*-30}px)`;
+  bs.style.transition='transform .06s linear';
+  bs.style.transform=`perspective(500px) rotateY(${sAng}deg) translateZ(${DATA.exit.sfold*-60}px) scaleY(${1-DATA.exit.sfold*0.08})`;
 }
 
 function renderExit(cv){
