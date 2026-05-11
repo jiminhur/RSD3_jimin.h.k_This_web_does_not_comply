@@ -90,7 +90,7 @@ html,body{
 /* ══ LOCK INDICATOR — hidden; lock timer now drawn on canvas ══ */
 #lock-ind{display:none!important;}
 
-/* ══ YOU FAILED — smaller, cold, quiet ══ */
+/* ══ YOU FAILED — cold, quiet, but confidently framed ══ */
 #failed-msg{
   position:fixed;inset:0;z-index:8500;
   background:rgba(17,17,17,.22);
@@ -100,10 +100,10 @@ html,body{
 @keyframes failedAnim{0%{opacity:0;}12%{opacity:1;}75%{opacity:1;}100%{opacity:0;}}
 #failed-inner{
   font-family:var(--harber);
-  font-size:clamp(16px,2.2vw,28px);   /* much smaller */
+  font-size:clamp(16px,2.2vw,28px);
   letter-spacing:.14em;text-transform:uppercase;
   color:var(--rect);font-weight:500;
-  background:var(--bk);padding:9px 22px;
+  background:var(--bk);padding:18px 48px;  /* larger, more confident */
 }
 
 /* ══ SCROLL CONTAINER ══ */
@@ -131,20 +131,29 @@ section{width:100%;height:100vh;position:relative;overflow:hidden;flex-shrink:0;
 .game-sec,.s-stage{position:relative;overflow:hidden;background:var(--bg);}
 .full-cv,.stage-cv{position:absolute;inset:0;z-index:2;cursor:none;}
 
-/* ══ EXIT DOM BUTTONS — 4× selection size, centered ══ */
+/* ══ EXIT DOM BUTTONS — fill lime rect as one giant divided surface ══ */
 .exit-buttons{
-  position:absolute;top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  z-index:7;display:flex;gap:22px;pointer-events:auto;
+  position:absolute;
+  /* Match lime rect geometry exactly */
+  left:5%;top:4%;
+  width:90%;height:84%;
+  z-index:7;display:flex;gap:0;pointer-events:auto;
+  /* Perspective container for child 3D transforms */
+  perspective:800px;
+  transform-style:preserve-3d;
 }
 .exit-btn{
-  font-family:var(--mon);font-size:var(--fsl);letter-spacing:.1em;
+  font-family:var(--mon);font-size:clamp(18px,2.8vw,38px);letter-spacing:.12em;
   text-transform:uppercase;font-weight:500;color:var(--bk);
-  background:var(--pink);border:none;padding:28px 64px;
-  cursor:none;min-width:210px;text-align:center;
+  background:var(--pink);border:none;
+  /* Each button takes exactly half the container */
+  flex:1;height:100%;
+  cursor:none;text-align:center;
+  /* Vertical centering */
+  display:flex;align-items:center;justify-content:center;
   transition:background .12s,color .12s;
-  /* Start position: buttons are fixed, only transform moves them */
   position:relative;
+  transform-style:preserve-3d;
 }
 .exit-btn:hover{background:var(--bk);color:var(--pink);}
 .exit-btn.stay{background:var(--lime);}
