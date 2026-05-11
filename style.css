@@ -1,214 +1,157 @@
-@font-face{font-family:'Harber';src:url('./HARBER-trial-Black.otf') format('opentype');font-weight:900;font-display:swap}
-@font-face{font-family:'HarberMed';src:url('./HARBER-trial-Medium.otf') format('opentype');font-weight:500;font-display:swap}
-@font-face{font-family:'Monument';src:url('./ABCMonumentGrotesk-Medium-Trial.otf') format('opentype');font-weight:500;font-display:swap}
-@font-face{font-family:'MonumentIt';src:url('./ABCMonumentGrotesk-MediumItalic-Trial.otf') format('opentype');font-weight:500;font-style:italic;font-display:swap}
+/* ═══════════════════════════════════════════════════════════════════
+   THIS WEB DOES NOT COMPLY — style.css v7
+   Lime expand loader. Unified rect system. Lock BR. Consistent cmd.
+═══════════════════════════════════════════════════════════════════ */
 
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+@font-face {
+  font-family:'Monument';
+  src:url('./ABCMonumentGrotesk-Medium-Trial.otf') format('opentype');
+  font-weight:500;font-display:swap;
+}
+@font-face {
+  font-family:'Harber';
+  src:url('./HARBER-trial-Medium.otf') format('opentype');
+  font-weight:500;font-display:swap;
+}
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+
 :root{
-  --y:#DFFF00;
-  --y1:#e8ff6a;--y2:#DFFF00;--y3:#c2dd00;
-  --bk:#0a0a0a;--wh:#f0f0ee;--wh2:#e8e8e6;--gr:#ccccca;
-  --bar:28px;
   --mon:'Monument','Helvetica Neue',Arial,sans-serif;
-  --har:'HarberMed','Harber','Impact',sans-serif;
+  --harber:'Harber','Impact',sans-serif;
+  --lime:#ccff00;         /* vivid — top bar + exit */
+  --pink:#f5d8e0;
+  --bg:#e8e8e6;           /* light warm gray page bg */
+  --rect:#ececea;         /* rect fill — lighter than bg */
+  --bk:#111111;
+  --bar-h:32px;
+  --fs:13px;
+  --fsl:16px;
+  /* Rect geometry — identical across ALL stages */
+  --rx:5%;  --ry:4%;  --rw:90%;  --rh:84%;
 }
-html,body{width:100%;height:100%;overflow:hidden;background:var(--wh);font-family:var(--mon);-webkit-font-smoothing:antialiased;cursor:none}
-.hide{display:none!important}
 
-#bar{position:fixed;top:0;left:0;right:0;height:var(--bar);background:var(--y);display:flex;align-items:center;justify-content:center;z-index:9999;font-size:10px;letter-spacing:.02em;color:var(--bk);white-space:nowrap}
-.bt{margin-right:4px}.bc{margin:0 2px}.ba{margin-left:4px;opacity:.3;font-size:8px}
-.cw{cursor:pointer;background:rgba(0,0,0,.07);padding:1px 6px;font-size:10px;color:var(--bk);border:none;user-select:none;letter-spacing:.04em;font-family:var(--mon);transition:background .12s,color .12s}
-.cw:hover{background:rgba(0,0,0,.13)}.cw.active{background:var(--bk);color:var(--y)}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  background:var(--bg);
+  font-family:var(--mon);
+  -webkit-font-smoothing:antialiased;
+  cursor:none;color:var(--bk);
+}
+.hide{display:none!important;}
 
-#sc{position:fixed;top:var(--bar);left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden}
-#sc::-webkit-scrollbar{display:none}#sc{scrollbar-width:none}
-#tall{width:100%;display:flex;flex-direction:column}
-section{width:100%;position:relative;overflow:hidden}
-.sec-bg{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block;z-index:0}
+/* ══ LOADER — pure lime full screen, zooms inward then fades ══ */
+#loader{
+  position:fixed;inset:0;z-index:50000;
+  background:#ccff00;   /* start as full vivid lime — no image needed */
+  overflow:hidden;
+}
+#ld-lime{
+  position:absolute;inset:0;
+  background:#ccff00;
+  /* Already full screen — transform scales it for the zoom-in feel */
+  transform-origin:center center;
+}
+/* Logo hidden — loader is purely lime, no image asset */
+#ld-logo{display:none!important;}
 
-.bottom-sec{height:100vh;position:relative;background:var(--wh2)}
-.bottom-err{z-index:1;animation:errPulse 3s ease-out infinite}
-@keyframes errPulse{0%{opacity:0}2%{opacity:1}15%{opacity:.95}40%{opacity:.4}70%{opacity:.08}85%{opacity:0}100%{opacity:0}}
-.theme-sec{height:100vh;position:relative;background:var(--wh2)}
+/* ══ TOP BAR ══ */
+#bar{
+  position:fixed;top:0;left:0;right:0;height:var(--bar-h);
+  background:var(--lime);
+  display:flex;align-items:center;justify-content:center;
+  z-index:9999;white-space:nowrap;gap:0;
+}
+.bar-title{
+  font-family:var(--mon);font-size:9.5px;letter-spacing:.1em;
+  font-weight:500;color:rgba(17,17,17,.36);text-transform:uppercase;
+}
+.bar-sep{margin:0 10px;opacity:.18;font-size:9px;font-family:var(--mon);}
+.bc{margin:0 3px;opacity:.18;font-size:9px;font-family:var(--mon);}
+.cw{
+  font-family:var(--mon);font-size:9px;letter-spacing:.1em;font-weight:500;
+  text-transform:uppercase;color:rgba(17,17,17,.36);
+  background:transparent;border:none;padding:5px 10px 4px;
+  cursor:pointer;user-select:none;transition:background .1s,color .1s;
+}
+.cw:hover,.cw.active{background:var(--bk);color:var(--lime);}
 
-.idx-sec{min-height:100vh;position:relative;overflow:hidden}
-.idx-ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:5}
-.idx-d{font-family:'MonumentIt',var(--mon);font-style:italic;font-size:12px;color:var(--bk);opacity:.4;margin-bottom:20px;letter-spacing:.04em}
-.idx-g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:620px;width:80%}
-.idx-b{background:var(--bk);color:var(--y);font-family:var(--har);font-size:clamp(15px,3.2vw,24px);padding:clamp(18px,4vw,34px) 10px;text-align:center;cursor:pointer;border:none;text-transform:uppercase;letter-spacing:.08em;transition:transform .22s cubic-bezier(.22,1,.36,1),background .25s,color .25s}
-.idx-b:hover{transform:scale(1.04);background:var(--y);color:var(--bk)}
-.idx-b:active{transform:scale(.97)}
-.idx-sec.inv .idx-d{color:var(--y);opacity:.5}.idx-sec.inv .idx-b{background:var(--y);color:var(--bk)}.idx-sec.inv .idx-b:hover{background:var(--bk);color:var(--y)}
+/* ══ LOCK INDICATOR — hidden; lock timer now drawn on canvas ══ */
+#lock-ind{display:none!important;}
 
-/* CATEGORY SECTIONS */
-.s-cat{height:100vh;background:#f0f0ee;position:relative;overflow:hidden;display:flex;flex-direction:column;margin:0;padding:0}
-.s-cat::after{content:"";display:none}
-.worm-cv{position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;cursor:none}
+/* ══ YOU FAILED — cold, quiet, but confidently framed ══ */
+#failed-msg{
+  position:fixed;inset:0;z-index:8500;
+  background:rgba(17,17,17,.22);
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:none;animation:failedAnim .55s ease forwards;
+}
+@keyframes failedAnim{0%{opacity:0;}12%{opacity:1;}75%{opacity:1;}100%{opacity:0;}}
+#failed-inner{
+  font-family:var(--harber);
+  font-size:clamp(16px,2.2vw,28px);
+  letter-spacing:.14em;text-transform:uppercase;
+  color:var(--rect);font-weight:500;
+  background:var(--bk);padding:18px 48px;  /* larger, more confident */
+}
 
-/* VIDEO ROW — no borders */
-.cat-row{position:absolute;bottom:0;left:0;width:100%;height:calc(33.333vw*9/16);z-index:3;display:flex;justify-content:center;gap:0;padding:0 5%;box-sizing:border-box;overflow:visible}
-.frame{position:relative;flex:1;height:100%;overflow:hidden;cursor:pointer;background:var(--gr);margin:0 1%}
+/* ══ SCROLL CONTAINER ══ */
+#sc{
+  position:fixed;top:var(--bar-h);left:0;right:0;bottom:0;
+  overflow-y:auto;overflow-x:hidden;
+}
+#sc::-webkit-scrollbar{display:none;}
+#sc{scrollbar-width:none;}
+#tall{width:100%;display:flex;flex-direction:column;}
+section{width:100%;height:100vh;position:relative;overflow:hidden;flex-shrink:0;}
+.sec-bg{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;object-position:center;display:block;z-index:0;
+}
 
-.frame video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;visibility:visible;opacity:1;z-index:5;background:#ccc}
-.fr-ph{position:absolute;inset:0;background:var(--gr);z-index:0}
+/* ══ BOTTOM — unchanged ══ */
+.bottom-sec{background:#c8c8c8;}
+.bottom-err{z-index:1;animation:errPulse 3s ease-out infinite;}
+@keyframes errPulse{
+  0%,85%,100%{opacity:0;}2%{opacity:1;}15%{opacity:.95;}40%{opacity:.4;}70%{opacity:.08;}
+}
 
-.s-det{height:100vh;background:var(--wh);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
-.det-cv{position:absolute;inset:0;z-index:1;pointer-events:none}
-.det-room{position:relative;z-index:2;width:82vw;height:calc(82vw*9/16);max-height:78vh;max-width:calc(78vh*16/9);overflow:hidden}
-.det-room video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;z-index:1;background:var(--wh)}
+/* ══ STAGE CANVAS ══ */
+.game-sec,.s-stage{position:relative;overflow:hidden;background:var(--bg);}
+.full-cv,.stage-cv{position:absolute;inset:0;z-index:2;cursor:none;}
 
-#loader{position:fixed;inset:0;z-index:50000;background:#c8c8c8;overflow:hidden}
-#ld-strip{position:absolute;top:0;left:0;width:900vw;height:100vh;display:flex;font-size:0;transition:transform .8s cubic-bezier(.25,.46,.45,.94)}
-#ld-strip.el{transition:transform .8s cubic-bezier(.68,-.3,.27,1.3)}
-#ld-strip img{width:100vw;height:100vh;object-fit:cover;flex-shrink:0;display:block}
-#ld-logo{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:clamp(240px,48vw,600px);z-index:3;opacity:0;transition:opacity .8s}
-#ld-logo.vis{opacity:.9}
-#ld-pct{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);font-family:var(--mon);font-size:10px;color:var(--bk);opacity:.28;z-index:4;letter-spacing:.08em}
-
-/* MAGNIFIER */
-#mag{position:fixed;width:28px;height:28px;border-radius:50%;pointer-events:none;z-index:8000;left:-200px;top:-200px;background:transparent;border:1.5px solid rgba(200,200,198,.7);transition:border-color .3s}
-#mag-ring{display:none}
-
-#save-btns{position:fixed;bottom:12px;right:12px;z-index:7000;display:flex;gap:6px}
-.sys-btn{font-family:var(--mon);font-size:9px;letter-spacing:.08em;background:var(--bk);color:var(--y);border:none;padding:8px 16px;cursor:pointer;text-transform:uppercase;transition:background .15s,color .15s}
-.sys-btn:hover{background:var(--y);color:var(--bk)}
-#input-hint{position:fixed;bottom:48px;left:50%;transform:translateX(-50%);font-family:var(--mon);font-size:10px;letter-spacing:.18em;color:var(--bk);opacity:.3;z-index:500;pointer-events:none}
-
-/* PRINT OVERLAY */
-#print-overlay{display:none!important}
-#print-room{display:none!important}
-#print-cv{display:none!important}
-#print-ui{display:flex;gap:10px;align-items:center}
-.sys-btn-ghost{font-family:var(--mon);font-size:9px;letter-spacing:.12em;background:rgba(255,204,216,.15);color:rgba(255,204,216,.8);border:none;padding:8px 16px;cursor:pointer;text-transform:uppercase;transition:color .2s,background .2s}
-.sys-btn-ghost:hover{color:var(--y)}
-
-
-#input-hint-bar{
-  display:none;
+/* ══ EXIT DOM BUTTONS — fill lime rect as one giant divided surface ══ */
+.exit-buttons{
   position:absolute;
-  left:50%;transform:translateX(-50%);
-  bottom:calc(33.333vw*9/16 + 8px);
-  z-index:8;
-  font-family:'Monument','Helvetica Neue',Arial,sans-serif;
-  font-size:9px;letter-spacing:.06em;
-  color:rgba(10,10,10,.7);
-  background:rgba(255,204,216,.95);
-  padding:5px 14px;
-  white-space:nowrap;
-  pointer-events:none;
+  /* Match lime rect geometry exactly */
+  left:5%;top:4%;
+  width:90%;height:84%;
+  z-index:7;display:flex;gap:0;pointer-events:auto;
+  /* Perspective container for child 3D transforms */
+  perspective:800px;
+  transform-style:preserve-3d;
 }
-#s-cat-Input .worm-cv{cursor:text}
-
-/* Poster archive mode button */
-#btn-poster{font-family:var(--mon);font-size:9px;letter-spacing:.08em;background:rgba(255,204,216,.9);color:rgba(10,10,10,.85);border:none;padding:8px 16px;cursor:pointer;text-transform:uppercase;transition:background .15s,color .15s}
-#btn-poster:hover{background:rgba(255,204,216,1);color:var(--bk)}
-
-/* ── SOUND BUTTON — integrated into system language ── */
-.snd-btn{
-  position:absolute;
-  bottom:8px;right:8px;
-  z-index:10;
-  font-family:'Monument','Helvetica Neue',Arial,sans-serif;
-  font-size:9px;
-  letter-spacing:.06em;
-  background:rgba(240,240,238,.88);
-  color:rgba(10,10,10,.7);
-  border:none;
-  padding:5px 10px;
-  cursor:pointer;
-  opacity:0;
-  transition:opacity .2s;
-  pointer-events:none;
+.exit-btn{
+  font-family:var(--mon);font-size:clamp(18px,2.8vw,38px);letter-spacing:.12em;
+  text-transform:uppercase;font-weight:500;color:var(--bk);
+  background:var(--pink);border:none;
+  /* Each button takes exactly half the container */
+  flex:1;height:100%;
+  cursor:none;text-align:center;
+  /* Vertical centering */
+  display:flex;align-items:center;justify-content:center;
+  transition:background .12s,color .12s;
+  position:relative;
+  transform-style:preserve-3d;
 }
-.frame:hover .snd-btn{opacity:1;pointer-events:auto}
+.exit-btn:hover{background:var(--bk);color:var(--pink);}
+.exit-btn.stay{background:var(--lime);}
+.exit-btn.stay:hover{background:var(--bk);color:var(--lime);}
 
-/* ── DETAIL: no black border, cleaner layout ── */
-.s-det{border:none!important;outline:none!important}
-.det-room{border:none!important;outline:none!important;box-shadow:none!important}
-#det-back{
-  position:absolute;top:8px;left:8px;z-index:20;
-  font-family:var(--mon);font-size:10px;
-  background:rgba(240,240,238,.92);border:none;
-  padding:5px 12px;cursor:pointer;
-  letter-spacing:.05em;text-transform:uppercase;
+/* ══ CURSOR ══ */
+#mag{
+  position:fixed;width:44px;height:44px;border-radius:50%;
+  pointer-events:none;z-index:8500;left:-100px;top:-100px;
+  mix-blend-mode:difference;background:rgba(0,0,0,.78);
 }
-/* Sound toggle inside detail view */
-#det-sound{
-  position:absolute;bottom:12px;right:12px;z-index:20;
-  font-family:'Monument','Helvetica Neue',Arial,sans-serif;
-  font-size:9px;letter-spacing:.06em;
-  background:rgba(240,240,238,.92);color:rgba(10,10,10,.72);
-  border:none;padding:5px 12px;cursor:pointer;
-}
-#det-sound:hover{background:rgba(223,255,0,.9);color:rgba(10,10,10,.9)}
-
-/* ── Extra outline/border removal for focused video ── */
-.s-det,.det-room,#det-room,#det-room video{
-  border:none!important;
-  outline:none!important;
-  box-shadow:none!important;
-}
-#det-room video{
-  object-fit:cover;
-}
-/* ALIGN detail bg texture canvas */
-#det-bg-canvas{
-  position:absolute;inset:0;z-index:0;pointer-events:none;
-  display:none;
-}
-
-
-/* ── VIDEO COLOR INTEGRATION ─────────────────────────────────────
-   Subtle filter to match video lime with site lime.
-   Soft-light lime overlay to unify color system.
-   Applied once, cleanly.
-────────────────────────────────────────────────────────────────── */
-
-/* Color correction — applied to all frame videos */
-.frame video,
-#det-room video {
-  filter:
-    saturate(1.08)
-    contrast(1.04)
-    brightness(1.02)
-    hue-rotate(-3deg);
-}
-
-/* Center panel: slightly cooler / less warm */
-.frame:nth-child(2) video {
-  filter:
-    saturate(0.98)
-    contrast(1.03)
-    brightness(1.01)
-    hue-rotate(-6deg);
-}
-
-/* Lime soft-light overlay on each frame */
-.frame::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: #DFFF00;
-  mix-blend-mode: soft-light;
-  opacity: 0.10;
-  pointer-events: none;
-  z-index: 2;
-}
-
-/* Sound button stays above overlay */
-.snd-btn { z-index: 10; }
-
-/* Lime overlay on focused detail room */
-.det-room::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: #DFFF00;
-  mix-blend-mode: soft-light;
-  opacity: 0.10;
-  pointer-events: none;
-  z-index: 4;
-}
-
-/* Cursor: outlined circle, no fill, reacts to section color */
-/* cursor color set via JS on #mag border-color */
+#mag-ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(204,255,0,.85);}
