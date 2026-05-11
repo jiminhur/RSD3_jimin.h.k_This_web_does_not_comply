@@ -1,120 +1,81 @@
 /* ═══════════════════════════════════════════════════════════════════
-   THIS WEB DOES NOT COMPLY — script.js v7
-   Lime-expand loader. No landing page. Unified ONE-rect bg system.
-   Game: no gaps, patterned, mechanical group slide. Scroll: 2-col
-   massive text + multi-layer 3D. Selection: wide spread, balanced colors.
-   Read: doubled text, aggressive eruptions. Nav: trails, both buttons.
-   Exit: centered fixed, cursor-evade with perspective tilt.
+   THIS WEB DOES NOT COMPLY — script.js v8
+   UI boxes outside rect (below). No gradient. Extreme scroll Z-depth.
+   Aggressive selection. 3D door-fold exit. Nav pink buttons.
+   Smaller YOU FAILED. Game clip fix.
 ═══════════════════════════════════════════════════════════════════ */
 'use strict';
 
-/* ── Font ─────────────────────────────────────────────────────── */
 const FM = sz => `500 ${sz}px 'Monument','Helvetica Neue',Arial,sans-serif`;
 const FS  = 13;
 const FSL = 16;
 
-/* ── Per-stage lime: identical RGB, only intensity changes ─────── */
-/* All stages use pure lime hue (H≈74°), just varying brightness/saturation */
 const STAGE_LIME=[
   '#f0ffb0',  /* 0 game */
   '#e6ff90',  /* 1 scroll */
   '#d8ff60',  /* 2 selection */
   '#ccff30',  /* 3 readability */
   '#c2ff10',  /* 4 navigation */
-  '#ccff00',  /* 5 exit = top bar */
+  '#ccff00',  /* 5 exit */
 ];
 
 const PINK   = '#f5d8e0';
-const BG     = '#e8e8e6';   /* page bg */
-const RECT   = '#ececea';   /* central rect fill */
+const BG     = '#e8e8e6';
+const RECT   = '#ececea';
 const BK     = '#111111';
 
-/* Rect constants — same geometry for every stage */
-const RX_F = 0.05;  /* left fraction */
-const RY_F = 0.04;  /* top fraction */
-const RW_F = 0.90;  /* width fraction */
-const RH_F = 0.84;  /* height fraction */
+/* Rect geometry — identical every stage */
+const RX_F = 0.05;
+const RY_F = 0.04;
+const RW_F = 0.90;
+const RH_F = 0.84;
 
-/* ── Utils ────────────────────────────────────────────────────── */
 const $     = id => document.getElementById(id);
 const rnd   = (a,b) => a + Math.random()*(b-a);
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const ease  = t => t<.5?2*t*t:-1+(4-2*t)*t;
 const lerp  = (a,b,t) => a+(b-a)*t;
 
-/* ── Globals ──────────────────────────────────────────────────── */
 let T=0, FC=0;
 let MX=-1, MY=-1, magX=-100, magY=-100;
 
-/* ── Snap ─────────────────────────────────────────────────────── */
 let allSections=[], currentIdx=0, isSnapping=false;
 const SNAP_MS=580;
 
-/* ── Stage lock ───────────────────────────────────────────────── */
 let activeStage=-1, stageEnteredAt=0;
 const LOCK_SEC=15;
 let lockVisible=false, failedCooldown=0;
 let minReachableStage=0;
 
-/* ── Data ─────────────────────────────────────────────────────── */
 const DATA={
-  game:{
-    tiles:[], cols:0, rows:0, cellSz:0,
-    cmdIdx:0, lastSwitch:0, switchCooldown:900,
-    /* Each tile has a lerp target position for smooth mechanical slide */
-    inited:false
-  },
-  scroll:{offset:0, vel:0, inited:false},
-  sel:{nodes:[], edges:[], clicks:0, nextId:0, inited:false},
-  read:{words:[], eruptions:[], interval:null, inited:false},
-  nav:{
-    x:0, y:0, vx:0, vy:0,
-    trails:[],   /* [{x,y,age}] — movement residue */
-    inited:false
-  },
-  exit:{
-    tries:0, inited:false,
-    /* Evasion state for each button */
-    evx:0, evy:0, svx:0, svy:0
-  }
+  game:{tiles:[],cols:0,rows:0,cellSz:0,cmdIdx:0,lastSwitch:0,switchCooldown:900,boardX:0,boardY:0,inited:false},
+  scroll:{offset:0,vel:0,inited:false},
+  sel:{nodes:[],edges:[],clicks:0,nextId:0,inited:false},
+  read:{words:[],eruptions:[],interval:null,inited:false},
+  nav:{x:0,y:0,vx:0,vy:0,trails:[],inited:false},
+  exit:{tries:0,inited:false,efold:0,sfold:0}
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   LOADER — lime rectangle expands from center, then reveal
+   LOADER
 ═══════════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded',()=>{
-  const ldr=$('loader'), logo=$('ld-logo'), lm=$('ld-lime');
-
-  /* Logo appears immediately */
+  const ldr=$('loader'),logo=$('ld-logo'),lm=$('ld-lime');
   setTimeout(()=>logo.classList.add('vis'),100);
-
-  /* Lime expands */
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    lm.classList.add('expanding');
-  }));
-
-  /* After 2s total: fade loader, start website */
+  requestAnimationFrame(()=>requestAnimationFrame(()=>lm.classList.add('expanding')));
   setTimeout(()=>{
-    ldr.style.transition='opacity .4s';
-    ldr.style.opacity='0';
-    setTimeout(()=>{ldr.style.display='none'; startWebsite();},400);
+    ldr.style.transition='opacity .4s';ldr.style.opacity='0';
+    setTimeout(()=>{ldr.style.display='none';startWebsite();},400);
   },2000);
 });
 
-/* ═══════════════════════════════════════════════════════════════
-   START — opens directly on game stage
-═══════════════════════════════════════════════════════════════ */
 function startWebsite(){
-  $('bar')?.classList.remove('hide');
-  $('sc')?.classList.remove('hide');
-  buildStages();
-  buildSectionIndex();
+  $('bar')?.classList.remove('hide');$('sc')?.classList.remove('hide');
+  buildStages();buildSectionIndex();
   wireBar();wireMouse();wireSnap();wireScrollFeed();
-
-  /* Land on game section */
   requestAnimationFrame(()=>{
     const idx=allSections.findIndex(s=>s.id==='s-game');
-    if(idx>=0){snapToIndex(idx,false); minReachableStage=idx;}
+    if(idx>=0){snapToIndex(idx,false);minReachableStage=idx;}
   });
   requestAnimationFrame(loop);
 }
@@ -123,11 +84,8 @@ function startWebsite(){
    BUILD STAGES
 ═══════════════════════════════════════════════════════════════ */
 const SDEFS=[
-  {id:'scrolling',  num:1},
-  {id:'selection',  num:2},
-  {id:'readability',num:3},
-  {id:'navigation', num:4},
-  {id:'exit',       num:5}
+  {id:'scrolling',num:1},{id:'selection',num:2},{id:'readability',num:3},
+  {id:'navigation',num:4},{id:'exit',num:5}
 ];
 
 function buildStages(){
@@ -148,9 +106,7 @@ function buildStages(){
   }
 }
 
-function buildSectionIndex(){
-  allSections=Array.from($('tall').querySelectorAll('section'));
-}
+function buildSectionIndex(){allSections=Array.from($('tall').querySelectorAll('section'));}
 
 /* ═══════════════════════════════════════════════════════════════
    SNAP
@@ -191,8 +147,7 @@ function wireSnap(){
 
 function canLeaveUp(){
   if(activeStage<0) return true;
-  const elapsed=(performance.now()-stageEnteredAt)/1000;
-  if(elapsed>=LOCK_SEC) return true;
+  if((performance.now()-stageEnteredAt)/1000>=LOCK_SEC) return true;
   showFailed();return false;
 }
 
@@ -217,9 +172,6 @@ function snapToIndex(idx,animate){
   })(performance.now());
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   ON ENTER
-═══════════════════════════════════════════════════════════════ */
 function onEnter(sec){
   const id=sec.id;
   if(id==='s-bottom'){activeStage=-1;updateBar(-1);hideLock();return;}
@@ -236,28 +188,13 @@ function onEnter(sec){
 
 function updateBar(num){
   document.body.dataset.stage=String(Math.max(0,num));
-  document.querySelectorAll('.cw').forEach(w=>{
-    w.classList.toggle('active',parseInt(w.dataset.stage,10)===num);
-  });
+  document.querySelectorAll('.cw').forEach(w=>w.classList.toggle('active',parseInt(w.dataset.stage,10)===num));
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   LOCK — bottom right
-═══════════════════════════════════════════════════════════════ */
-function showLock(){
-  const li=$('lock-ind');if(!li) return;
-  li.classList.remove('hide');lockVisible=true;
-  $('lock-label').textContent='LOCKED';$('lock-fill').style.width='0%';
-}
-function hideLock(){$('lock-ind')?.classList.add('hide');lockVisible=false;}
-function tickLock(){
-  if(!lockVisible||activeStage<0) return;
-  const elapsed=(performance.now()-stageEnteredAt)/1000;
-  const pct=Math.min(1,elapsed/LOCK_SEC),rem=Math.max(0,LOCK_SEC-elapsed);
-  $('lock-fill').style.width=(pct*100)+'%';
-  $('lock-label').textContent=rem>0?'LOCKED':'UNLOCKED';
-  $('lock-time').textContent=rem>0?Math.ceil(rem)+'s':'—';
-}
+/* tickLock: DOM lock-ind is hidden; canvas drawUI handles all lock display */
+function tickLock(){}
+function showLock(){lockVisible=true;}
+function hideLock(){lockVisible=false;}
 
 function wireBar(){
   document.querySelectorAll('.cw').forEach(w=>{
@@ -270,9 +207,7 @@ function wireBar(){
   });
 }
 function wireMouse(){document.addEventListener('mousemove',e=>{MX=e.clientX;MY=e.clientY;});}
-function wireScrollFeed(){
-  window.addEventListener('wheel',e=>{if(activeStage===1) feedScroll(e.deltaY);},{passive:true});
-}
+function wireScrollFeed(){window.addEventListener('wheel',e=>{if(activeStage===1) feedScroll(e.deltaY);},{passive:true});}
 
 /* ═══════════════════════════════════════════════════════════════
    CANVAS UTILITY
@@ -299,17 +234,18 @@ function xhair(ctx,cv){
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SHARED BACKGROUND — ONE gray field + lime glow + ONE lime rect
-   Identical geometry for every stage, only lime intensity varies.
+   SHARED BACKGROUND — flat gray + subtle texture + one lime rect
+   NO gradient, NO glow, NO opacity layers.
 ═══════════════════════════════════════════════════════════════ */
 function drawBg(ctx,W,H,sNum){
   const lime=STAGE_LIME[sNum]||STAGE_LIME[0];
 
-  /* 1. Flat pale gray background — no gradient, no glow */
+  /* 1. Clean flat gray */
   ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
 
-  /* 2. Subtle typography texture — very faint, before rect */
-  ctx.save();ctx.font=FM(8);ctx.fillStyle='rgba(17,17,17,0.030)';ctx.textBaseline='top';
+  /* 2. Faint typography texture */
+  ctx.save();
+  ctx.font=FM(8);ctx.fillStyle='rgba(17,17,17,0.028)';ctx.textBaseline='top';
   const word=['SCROLLING','SELECTION','READABILITY','NAVIGATION','EXIT','EXIT'][sNum]||'GAME';
   const tw=ctx.measureText(word+'   ').width;
   for(let y=0;y<H;y+=18){
@@ -318,46 +254,47 @@ function drawBg(ctx,W,H,sNum){
   }
   ctx.restore();
 
-  /* 3. ONE clean lime rectangle — same geometry every stage */
+  /* 3. ONE lime rectangle */
   ctx.fillStyle=lime;
   ctx.fillRect(W*RX_F,H*RY_F,W*RW_F,H*RH_F);
 }
 
-/* ── UI bar: cmd box (centered) + lock box (right-aligned, INSIDE lime rect) ─
-   Both boxes: identical height, font size, and bottom baseline.
-   Positioned inside the lime rect, flush with its bottom edge.        ── */
-const UI_BH  = FS + 14;          /* box height */
-const UI_PX  = 11;                /* horizontal padding */
-const UI_PY  = (UI_BH - FS) / 2; /* vertical padding for centred text */
-const UI_MARGIN = 10;             /* inset from rect bottom edge */
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL UI — cmd box (centered) + lock box (right-aligned)
+   BOTH sit BELOW the lime rectangle on the SAME baseline.
+   SINGLE source of truth — called once per render, produces ONE lock box.
+═══════════════════════════════════════════════════════════════ */
+const UI_BH = FS + 14;           /* shared box height */
+const UI_PX = 11;                 /* shared horizontal padding */
+const UI_PY = (UI_BH - FS) / 2;  /* vertical centering of text */
+const UI_Y_OFF = 6;               /* gap between rect bottom and boxes */
 
 function drawUI(ctx,W,H,cmdText){
-  /* Both boxes sit inside the lime rect, at its bottom */
+  /* Geometry */
   const rectRight  = W*(RX_F+RW_F);
-  const rectLeft   = W*RX_F;
   const rectBottom = H*(RY_F+RH_F);
-  /* Bottom of box aligns UI_MARGIN above rect bottom */
-  const by = rectBottom - UI_MARGIN - UI_BH;
+  const by = rectBottom + UI_Y_OFF;   /* BELOW the lime rect */
 
   ctx.font=FM(FS);
 
-  /* ── Lock box — right-aligned flush with rect right edge, inside ── */
+  /* ── Lock box — right-aligned to rect right edge, below rect ── */
   const elapsed=(performance.now()-stageEnteredAt)/1000;
   const rem=Math.max(0,LOCK_SEC-elapsed);
   const lockTxt=rem>0?'LOCKED — '+Math.ceil(rem)+'s':'UNLOCKED';
   const ltw=ctx.measureText(lockTxt).width;
   const lbw=ltw+UI_PX*2;
-  const lbx=rectRight-lbw;                    /* flush with rect right */
+  const lbx=rectRight-lbw;
   ctx.fillStyle=RECT;ctx.fillRect(lbx,by,lbw,UI_BH);
   ctx.fillStyle=BK;ctx.textBaseline='top';ctx.fillText(lockTxt,lbx+UI_PX,by+UI_PY);
 
-  /* ── Command box — horizontally centered in page, fits text ── */
+  /* ── Command box — centered below rect ── */
   const ctw=ctx.measureText(cmdText).width;
   const cbw=ctw+UI_PX*2;
   const cbx=W/2-cbw/2;
   ctx.fillStyle=RECT;ctx.fillRect(cbx,by,cbw,UI_BH);
   ctx.fillStyle=BK;ctx.fillText(cmdText,cbx+UI_PX,by+UI_PY);
 }
+/* Alias */
 function cmdBox(ctx,W,H,text){drawUI(ctx,W,H,text);}
 
 function initStage(id){
@@ -369,10 +306,7 @@ function initStage(id){
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   GAME — tight grid, NO gaps, mechanical group slide
-   Colors: pink / light-gray / lime in diagonal stripes.
-   Command switches when cursor < 65px from any target tile.
-   On switch: all tiles of that color slide 1 column right (animate).
+   GAME — tight grid, clip to rect, only reacts on proximity
 ═══════════════════════════════════════════════════════════════ */
 const G_LIME='#e8ffa0';
 const G_PINK=PINK;
@@ -388,28 +322,29 @@ function wireGame(){
   const cv=$('cv-game');if(!cv||cv.dataset.wired) return;
   cv.dataset.wired='1';
   if(!DATA.game.inited){DATA.game.inited=true;buildGrid(cv);}
-  cv.addEventListener('click',e=>{
-    const r=cv.getBoundingClientRect();gameClick(e.clientX-r.left,e.clientY-r.top);
-  });
+  cv.addEventListener('click',e=>{const r=cv.getBoundingClientRect();gameClick(e.clientX-r.left,e.clientY-r.top);});
 }
 
 function buildGrid(cv){
   const W=cv.parentElement.offsetWidth||window.innerWidth;
   const H=cv.parentElement.offsetHeight||window.innerHeight;
-  const SZ=16;  /* smaller tiles, denser */
-  const boardX=W*RX_F, boardY=H*RY_F;
-  const boardW=W*RW_F, boardH=H*RH_F*0.9;
+  const SZ=16;
+  /* Board fills the lime rect exactly */
+  const boardX=Math.round(W*RX_F);
+  const boardY=Math.round(H*RY_F);
+  const boardW=Math.round(W*RW_F);
+  const boardH=Math.round(H*RH_F);
   const cols=Math.floor(boardW/SZ);
   const rows=Math.floor(boardH/SZ);
   DATA.game.cols=cols;DATA.game.rows=rows;DATA.game.cellSz=SZ;
   DATA.game.boardX=boardX;DATA.game.boardY=boardY;
+  DATA.game.boardW=boardW;DATA.game.boardH=boardH;
   DATA.game.tiles=[];
   for(let r=0;r<rows;r++){
     for(let c=0;c<cols;c++){
       const pat=(r*3+c)%5;
       const color=pat<2?G_PINK:pat<4?G_GRAY:G_LIME;
-      /* rx/ry = rendering (lerped) position */
-      DATA.game.tiles.push({col:c,row:r,rx:c,ry:r,color});
+      DATA.game.tiles.push({col:c,row:r,rx:c,color});
     }
   }
   DATA.game.cmdIdx=0;DATA.game.lastSwitch=performance.now();
@@ -417,22 +352,15 @@ function buildGrid(cv){
 
 function slideTargetTiles(){
   const tc=GAME_CMDS[DATA.game.cmdIdx%GAME_CMDS.length].color;
-  DATA.game.tiles.forEach(t=>{
-    if(t.color===tc){
-      t.col=(t.col+1)%DATA.game.cols;
-      /* rx will lerp toward new col */
-    }
-  });
+  DATA.game.tiles.forEach(t=>{if(t.color===tc) t.col=(t.col+1)%DATA.game.cols;});
 }
 
 function gameClick(cx,cy){
-  const SZ=DATA.game.cellSz;
-  const bX=DATA.game.boardX,bY=DATA.game.boardY;
+  const SZ=DATA.game.cellSz,bX=DATA.game.boardX,bY=DATA.game.boardY;
   for(let i=0;i<DATA.game.tiles.length;i++){
     const t=DATA.game.tiles[i];
     const tx=bX+t.rx*SZ,ty=bY+t.row*SZ;
     if(cx>=tx&&cx<=tx+SZ&&cy>=ty&&cy<=ty+SZ){
-      /* Swap with neighbor */
       const nb=DATA.game.tiles.filter(n=>Math.abs(n.col-t.col)<=1&&Math.abs(n.row-t.row)<=1&&n!==t);
       if(nb.length){const nn=nb[Math.floor(Math.random()*nb.length)];const tmp=t.color;t.color=nn.color;nn.color=tmp;}
       break;
@@ -448,22 +376,26 @@ function renderGame(cv){
   const SZ=DATA.game.cellSz,now=performance.now();
   const bX=DATA.game.boardX,bY=DATA.game.boardY;
 
-  /* Lerp rendering positions toward logical col — smooth mechanical slide */
-  /* Only move if rx differs from col by more than 0.01 */
+  /* Lerp — only animate when tile has moved */
   DATA.game.tiles.forEach(t=>{
     if(Math.abs(t.rx-t.col)>0.01) t.rx=lerp(t.rx,t.col,0.14);
     else t.rx=t.col;
   });
 
-  /* Draw tiles — NO gap, tight pack */
-  DATA.game.tiles.forEach(t=>{
-    const tx=bX+t.rx*SZ,ty=bY+t.row*SZ;
-    ctx.fillStyle=t.color;
-    ctx.fillRect(Math.round(tx),Math.round(ty),SZ,SZ);
-  });
+  /* Clip board to lime rect to prevent any overflow */
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(bX,bY,DATA.game.boardW,DATA.game.boardH);
+  ctx.clip();
 
-  /* Proximity: switch command ONLY when cursor is near a target tile.
-     Board is completely still when cursor is elsewhere. */
+  /* Draw tiles — no gaps */
+  DATA.game.tiles.forEach(t=>{
+    ctx.fillStyle=t.color;
+    ctx.fillRect(Math.round(bX+t.rx*SZ),Math.round(bY+t.row*SZ),SZ,SZ);
+  });
+  ctx.restore();
+
+  /* Proximity — board only reacts when cursor is near current target */
   const cvR=cv.getBoundingClientRect();
   const cx=MX-cvR.left,cy=MY-cvR.top;
   if(cx>0&&cy>0&&(now-DATA.game.lastSwitch)>DATA.game.switchCooldown){
@@ -471,7 +403,6 @@ function renderGame(cv){
     let near=false;
     for(let i=0;i<DATA.game.tiles.length;i++){
       const t=DATA.game.tiles[i];if(t.color!==tc) continue;
-      /* Use rendered rx position for accurate proximity */
       if(Math.hypot(bX+t.rx*SZ+SZ/2-cx,bY+t.row*SZ+SZ/2-cy)<58){near=true;break;}
     }
     if(near){
@@ -481,15 +412,15 @@ function renderGame(cv){
     }
   }
 
-  /* Command + lock UI */
   cmdBox(ctx,W,H,GAME_CMDS[DATA.game.cmdIdx%GAME_CMDS.length].label);
   xhair(ctx,cv);
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SCROLLING — 2-column, very dense text, multi-layer 3D inside clip
+   SCROLLING — violent spatial distortion, 100% opacity, clipped
+   Lines live on different Z-planes. Scrolling reveals depth.
+   Some letters become screen-filling. No opacity ever used.
 ═══════════════════════════════════════════════════════════════ */
-/* 4× original text — two column blocks */
 const SCROLL_BASE=
 `scroll.input.recorded()
 viewport.position += deltaY — result: null
@@ -537,60 +468,75 @@ scroll.input.recorded() — scroll.locked === true — loop: infinite
 viewport.position += deltaY — result: null — content.render: void`;
 
 const SCROLL_LINES=SCROLL_BASE.split('\n');
-/* Build two columns of lines */
-const HALF=Math.ceil(SCROLL_LINES.length/2);
-const COL1=SCROLL_LINES.slice(0,HALF);
-const COL2=SCROLL_LINES.slice(HALF);
+const HALF_S=Math.ceil(SCROLL_LINES.length/2);
+const COL1=SCROLL_LINES.slice(0,HALF_S);
+const COL2=SCROLL_LINES.slice(HALF_S);
 
 function initScrolling(){DATA.scroll.offset=0;DATA.scroll.vel=0;DATA.scroll.inited=true;}
-function feedScroll(dy){DATA.scroll.vel+=dy*0.5;}
+function feedScroll(dy){DATA.scroll.vel+=dy*0.75;}
 
 function renderScrolling(cv){
   const r=sz(cv);if(!r) return;
   const {ctx,W,H}=r;ctx.clearRect(0,0,W,H);
   drawBg(ctx,W,H,1);
 
-  /* Physics */
-  DATA.scroll.vel*=0.84;DATA.scroll.offset+=DATA.scroll.vel;
-  DATA.scroll.offset=clamp(DATA.scroll.offset,-H*0.7,H*0.7);
-  DATA.scroll.offset*=0.94;
+  DATA.scroll.vel*=0.83;
+  DATA.scroll.offset+=DATA.scroll.vel;
+  DATA.scroll.offset=clamp(DATA.scroll.offset,-H*1.2,H*1.2);
+  DATA.scroll.offset*=0.96;
+
   const pull=DATA.scroll.offset;
   const absP=Math.abs(pull);
 
-  /* Panel inside lime rect */
   const px=W*RX_F,py=H*RY_F,pw=W*RW_F,ph=H*RH_F;
   const colW=(pw-32)/2;
-  /* Text starts slightly lower in the rect */
-  const textStartY=py+20;
   const lineH=Math.round(FS*1.6);
+  /* Text starts 18px from top of rect */
+  const textStartY=py+18;
 
-  /* CLIP strictly to lime rect */
+  /* Hard clip to lime rect — nothing escapes */
   ctx.save();ctx.beginPath();ctx.rect(px,py,pw,ph);ctx.clip();
 
-  /* ── Main layer — each line has its own Z-depth displacement ──
-     Lines are NOT on a flat plane. Each shifts independently in X+Y
-     based on a depth phase. When scrolling, the misregistration
-     becomes visible as spatial layers. All at 100% opacity. */
   ctx.font=FM(FS);ctx.fillStyle=BK;ctx.textBaseline='top';
 
-  const drawCol=(lines,colX)=>{
+  /* ── Per-line spatial displacement ──
+     Each line has a unique Z-depth phase.
+     At rest: normal paragraph. While scrolling: each line shifts
+     independently in X, Y and scale — revealing hidden depth layers.
+     Large |pull| → some lines scale to screen-filling size.
+     NO opacity ever. All displacement from position + scale + skew. */
+  const drawSpatialCol=(lines,baseX)=>{
     lines.forEach((line,i)=>{
-      /* Per-line depth phase — creates Z layering feel */
-      const phase=Math.sin(i*0.42)*Math.cos(i*0.27);
-      /* At rest: lines sit normally. When scrolling: they displace */
-      const dX=pull*phase*0.08 + absP*Math.sin(i*0.31)*0.012;
-      const dY=i*lineH + pull*(0.55 + phase*0.3);
-      /* Slight per-line skew based on depth */
-      const sk=pull*phase*0.0012;
+      /* Each line has a unique Z-depth phase — sinusoidal per-line */
+      const dp=Math.sin(i*0.53+0.8)*Math.cos(i*0.29);
+      /* dp ranges -1..1. Lines near +1 explode toward viewer, near -1 collapse back. */
+
+      /* Scale: at large pull, dp=+1 lines blow up massively (fills screen), dp=-1 shrink tiny */
+      /* Max scale at full pull ~H/lineH (one line fills height) */
+      const maxScale = absP > 20 ? 1 + (absP/H)*8*Math.max(0,dp) : 1;
+      const minScale = Math.max(0.04, 1 - absP*0.008*Math.max(0,-dp));
+      const sc = dp >= 0 ? maxScale : minScale;
+
+      /* X displacement: heavy parallax — foreground lines shift far left/right */
+      const dx = pull * dp * 0.55 + absP * Math.sin(i*0.37+1.1) * 0.09 * Math.sign(pull);
+
+      /* Y: each line's depth shifts its Y position independently */
+      const dy = textStartY + i*lineH + pull*(0.65 + dp*0.5);
+
+      /* Skew: misregistration feel — stronger at large pull */
+      const skew = pull * dp * 0.004;
+
       ctx.save();
-      ctx.translate(colX+dX, textStartY+dY);
-      if(Math.abs(sk)>0.0001) ctx.transform(1,0,sk,1,0,0);
+      ctx.translate(baseX + dx, dy);
+      ctx.scale(sc, sc);
+      if(Math.abs(skew)>0.0001) ctx.transform(1,0,skew/sc,1,0,0);
       ctx.fillText(line,0,0);
       ctx.restore();
     });
   };
-  drawCol(COL1,px+16);
-  drawCol(COL2,px+colW+24);
+
+  drawSpatialCol(COL1,px+16);
+  drawSpatialCol(COL2,px+colW+24);
 
   ctx.restore(); /* end clip */
   cmdBox(ctx,W,H,'SCROLL_LOCKED = true');
@@ -598,10 +544,9 @@ function renderScrolling(cv){
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SELECTION — wide golden-angle spread, balanced colors, lime edges
+   SELECTION — aggressive multiplication, accumulates forever
 ═══════════════════════════════════════════════════════════════ */
 const SEED=['A','B','C','D','E'];
-/* Edge colors: alternate pink / gray so lines are visible on lime bg */
 const EDGE_COLORS=[PINK,'#c8c8c6',PINK,'#c8c8c6'];
 
 function initSelection(){
@@ -625,12 +570,11 @@ function addSelNode(x,y,pid,label,still){
   const W=cv.parentElement.offsetWidth||window.innerWidth;
   const H=cv.parentElement.offsetHeight||window.innerHeight;
   const id=DATA.sel.nextId++;
-  /* Balanced 3-color cycling: RECT / PINK / lime */
   const palette=[RECT,PINK,STAGE_LIME[2]];
   const bg=still?RECT:palette[id%3];
   DATA.sel.nodes.push({
     id,parentId:pid,
-    x:clamp(x,4,W-170),y:clamp(y,H*0.04,H*0.94),
+    x:clamp(x,4,W-170),y:clamp(y,H*0.04,H*0.95),
     vx:0,vy:0,label,text:label+'_SELECT',bg,w:0,h:FS+16,still:!!still
   });
   if(pid!=null) DATA.sel.edges.push({from:pid,to:id});
@@ -644,19 +588,19 @@ function onSelClick(cx,cy){
   const cv=$('cv-selection');if(!cv) return;
   const W=cv.parentElement.offsetWidth||window.innerWidth;
   const H=cv.parentElement.offsetHeight||window.innerHeight;
-  const px=hit?hit.x+(hit.w||80)/2:W/2, py=hit?hit.y:H/2;
+  const px=hit?hit.x+(hit.w||80)/2:W/2,py=hit?hit.y:H/2;
   const pl=hit?hit.label:'';
-  /* Grow aggressively: 8, 20, then 28+ per click */
-  const count=DATA.sel.clicks===1?8:DATA.sel.clicks===2?20:Math.min(40,14+DATA.sel.clicks*8);
+  /* Aggressive growth: 10 / 24 / 40+ per click */
+  const count=DATA.sel.clicks===1?10:DATA.sel.clicks===2?24:Math.min(50,18+DATA.sel.clicks*9);
   const golden=Math.PI*(3-Math.sqrt(5));
   for(let i=0;i<count;i++){
-    const ang=i*golden+rnd(-0.3,0.3);
-    const dist=rnd(150,380);  /* wide spread */
+    const ang=i*golden+rnd(-0.35,0.35);
+    const dist=rnd(160,440);  /* very wide */
     addSelNode(px+Math.cos(ang)*dist,py+Math.sin(ang)*dist,hit?.id??null,pl+(i+1),false);
   }
-  /* Cap at 500 — no splicing of existing nodes so they accumulate */
-  if(DATA.sel.nodes.length>500) DATA.sel.nodes.splice(SEED.length,50);
-  if(DATA.sel.edges.length>600) DATA.sel.edges.splice(0,50);
+  /* Soft cap — preserve existing nodes, only trim oldest overflow */
+  if(DATA.sel.nodes.length>600) DATA.sel.nodes.splice(SEED.length,30);
+  if(DATA.sel.edges.length>700) DATA.sel.edges.splice(0,30);
 }
 
 function renderSelection(cv){
@@ -667,7 +611,7 @@ function renderSelection(cv){
   const cxM=MX-cvR.left,cyM=MY-cvR.top;
   const chaos=DATA.sel.clicks>0;
 
-  /* Edges — alternating pink/gray, visible on lime bg */
+  /* Edges — pink/gray alternating */
   DATA.sel.edges.forEach((e,ei)=>{
     const fn=DATA.sel.nodes.find(n=>n.id===e.from);
     const tn=DATA.sel.nodes.find(n=>n.id===e.to);
@@ -682,10 +626,10 @@ function renderSelection(cv){
     if(!n.still&&chaos&&cxM>0){
       const dx=(n.x+(n.w||80)/2)-cxM,dy=(n.y+n.h/2)-cyM;
       const d=Math.hypot(dx,dy);
-      if(d<120){const f=(120-d)/120;n.vx+=(dx/Math.max(d,1))*f*3;n.vy+=(dy/Math.max(d,1))*f*2.5;}
+      if(d<120){const f=(120-d)/120;n.vx+=(dx/Math.max(d,1))*f*3.5;n.vy+=(dy/Math.max(d,1))*f*2.8;}
     }
     n.vx*=0.84;n.vy*=0.84;n.x+=n.vx;n.y+=n.vy;
-    n.x=clamp(n.x,4,W-170);n.y=clamp(n.y,H*0.04,H*0.94);
+    n.x=clamp(n.x,4,W-170);n.y=clamp(n.y,H*0.04,H*0.95);
     ctx.font=FM(FS);const tw=ctx.measureText(n.text).width;
     const bpx=10,bpy=7;n.w=tw+bpx*2;n.h=FS+bpy*2;
     ctx.fillStyle=n.bg;ctx.fillRect(n.x,n.y,n.w,n.h);
@@ -697,7 +641,7 @@ function renderSelection(cv){
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   READABILITY — 2 columns, doubled text, very aggressive eruptions
+   READABILITY — kept as-is, cmdBox moved outside rect via drawUI
 ═══════════════════════════════════════════════════════════════ */
 const READ_TXT=
 `The user agrees to read all material presented within this interface.
@@ -744,24 +688,20 @@ function initReadability(){
   const cv=$('cv-readability');if(!cv) return;
   const W=cv.parentElement.offsetWidth||window.innerWidth;
   const H=cv.parentElement.offsetHeight||window.innerHeight;
-  /* Two columns inside lime rect */
   const rx=W*RX_F+14,ry=H*RY_F+14;
-  const rw=W*RW_F-28;
-  const colW=(rw-20)/2;
+  const rw=W*RW_F-28,colW=(rw-20)/2;
   const lineH=Math.round(FS*1.68);
-  const tmp=document.createElement('canvas').getContext('2d');
-  tmp.font=FM(FS);
-  const lines=READ_TXT.split('\n');
-  const half=Math.ceil(lines.length/2);
+  const tmp=document.createElement('canvas').getContext('2d');tmp.font=FM(FS);
+  const lines=READ_TXT.split('\n');const half=Math.ceil(lines.length/2);
   [[lines.slice(0,half),rx],[lines.slice(half),rx+colW+20]].forEach(([ls,gx])=>{
     let gy=ry;
     ls.forEach(line=>{
       let cx2=gx;
       line.split(' ').forEach(word=>{
         if(!word) return;
-        const tw=tmp.measureText(word+' ').width;
+        const tww=tmp.measureText(word+' ').width;
         DATA.read.words.push({text:word,gx:cx2,gy,ox:0,oy:0,vox:0,voy:0,scaleX:1,scaleY:1,skewX:rnd(-0.04,0.04),baseFs:FS,currentFs:FS});
-        cx2+=tw;
+        cx2+=tww;
       });
       gy+=lineH;
     });
@@ -788,8 +728,6 @@ function renderReadability(cv){
   const now=performance.now();
   const cvR=cv.getBoundingClientRect();
   const cx=MX-cvR.left,cy=MY-cvR.top;
-
-  /* Apply eruptions */
   DATA.read.eruptions.forEach(e=>{
     const w=DATA.read.words[e.wordIdx];if(!w) return;
     const age=(now-e.born)/e.dur;if(age>1) return;
@@ -800,7 +738,6 @@ function renderReadability(cv){
     w.vox+=(e.targetOx*boom-w.ox)*0.15;w.voy+=(e.targetOy*boom-w.oy)*0.15;
   });
   DATA.read.eruptions=DATA.read.eruptions.filter(e=>(now-e.born)<e.dur+80);
-
   DATA.read.words.forEach(w=>{
     if(cx>0){
       const wx2=w.gx+w.ox,wy2=w.gy+w.oy;
@@ -821,7 +758,8 @@ function renderReadability(cv){
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   NAVIGATION — module follows cursor, trails left behind, both buttons
+   NAVIGATION — module follows cursor, trails, PINK selection boxes
+   RETURN TO PREVIOUS PAGE + SKIP TO NEXT PAGE as pink boxes
 ═══════════════════════════════════════════════════════════════ */
 const NAV_LINES=[
   '#04 NAVIGATION','',
@@ -830,18 +768,15 @@ const NAV_LINES=[
   'next_button.follow(user_input) — non-binding instruction.',
   'movement !== access. Path forward is acknowledged.',
   'Restricted pathways enforced at the system level.',
-  'Cursor-following does not imply navigation. System retains control.',
-  'repositioning.request() has been logged and discarded.',
-  'navigation.locked = true. direction.confirmed → access.denied.',
-  'All cursor movement is recorded. Access remains unavailable.',
-  'The interface observes all positional changes. No freedom granted.',
+  'Cursor-following does not imply navigation.',
+  'repositioning.request() logged and discarded.',
+  'navigation.locked = true. direction → access.denied.',
+  'All movement recorded. Access remains unavailable.',
 ];
 
 function initNavigation(){
   const W=window.innerWidth,H=window.innerHeight;
-  DATA.nav.x=W*RX_F;DATA.nav.y=H*RY_F;
-  DATA.nav.vx=0;DATA.nav.vy=0;
-  DATA.nav.trails=[];DATA.nav.inited=true;
+  DATA.nav.x=W*RX_F;DATA.nav.y=H*RY_F;DATA.nav.vx=0;DATA.nav.vy=0;DATA.nav.trails=[];DATA.nav.inited=true;
 }
 
 function renderNavigation(cv){
@@ -852,13 +787,15 @@ function renderNavigation(cv){
   const cx=MX-cvR.left,cy=MY-cvR.top;
   const lime=STAGE_LIME[4];
   const now=performance.now();
-
   ctx.font=FM(FS);
   let maxW=0;NAV_LINES.forEach(l=>{maxW=Math.max(maxW,ctx.measureText(l).width);});
   const padX=16,padY=12,lineH=Math.round(FS*1.8);
   const blockW=Math.min(maxW+padX*2,W*RW_F);
   const blockH=NAV_LINES.length*lineH+padY*2;
-  const btnH=36,btnGap=8,btnW=(blockW-btnGap)/2;
+  /* Pink selection-style buttons */
+  const btnH=FS+16,btnGap=10;
+  const btn1W=ctx.measureText('RETURN TO PREVIOUS PAGE').width+UI_PX*2;
+  const btn2W=ctx.measureText('SKIP TO NEXT PAGE').width+UI_PX*2;
   const totalH=blockH+btnGap+btnH;
 
   /* Top-left tracks cursor */
@@ -867,24 +804,22 @@ function renderNavigation(cv){
   DATA.nav.vx*=0.74;DATA.nav.vy*=0.74;
   DATA.nav.x+=DATA.nav.vx;DATA.nav.y+=DATA.nav.vy;
   DATA.nav.x=clamp(DATA.nav.x,W*RX_F,W*(RX_F+RW_F)-blockW);
-  DATA.nav.y=clamp(DATA.nav.y,H*RY_F,H*(RY_F+RH_F)-totalH);
+  DATA.nav.y=clamp(DATA.nav.y,H*RY_F,H*(RY_F+RH_F)-totalH-4);
 
-  /* Record trail */
+  /* Trails */
   const speed=Math.hypot(DATA.nav.vx,DATA.nav.vy);
   if(speed>0.5) DATA.nav.trails.push({x:DATA.nav.x,y:DATA.nav.y,born:now});
   if(DATA.nav.trails.length>60) DATA.nav.trails.shift();
-
-  /* Draw trails — outline rects fading out */
   DATA.nav.trails.forEach(tr=>{
     const age=(now-tr.born)/3500;
-    const alpha=Math.max(0,0.28-age*0.28);
+    const alpha=Math.max(0,0.25-age*0.25);
     ctx.save();ctx.globalAlpha=alpha;
     ctx.strokeStyle=lime;ctx.lineWidth=1;
     ctx.strokeRect(tr.x,tr.y,blockW,blockH);
     ctx.restore();
   });
 
-  /* Paragraph block */
+  /* Paragraph */
   ctx.fillStyle=lime;ctx.fillRect(DATA.nav.x,DATA.nav.y,blockW,blockH);
   ctx.font=FM(FS);ctx.fillStyle=BK;ctx.textBaseline='top';
   NAV_LINES.forEach((line,i)=>{
@@ -893,30 +828,33 @@ function renderNavigation(cv){
     else ctx.fillText(line,DATA.nav.x+padX,DATA.nav.y+padY+i*lineH);
   });
 
-  /* Both buttons */
+  /* Buttons — PINK, same style as selection boxes */
   const btnY=DATA.nav.y+blockH+btnGap;
-  ctx.fillStyle=lime;ctx.fillRect(DATA.nav.x,btnY,btnW,btnH);
-  ctx.fillStyle=BK;ctx.font=FM(FS);ctx.textBaseline='middle';ctx.textAlign='center';
-  ctx.fillText('RETURN TO PREVIOUS PAGE',DATA.nav.x+btnW/2,btnY+btnH/2);
-  ctx.fillStyle=lime;ctx.fillRect(DATA.nav.x+btnW+btnGap,btnY,btnW,btnH);
-  ctx.fillText('SKIP TO NEXT PAGE',DATA.nav.x+btnW+btnGap+btnW/2,btnY+btnH/2);
-  ctx.textAlign='left';
+  const bpy2=(btnH-FS)/2;
+  ctx.fillStyle=PINK;ctx.fillRect(DATA.nav.x,btnY,btn1W,btnH);
+  ctx.fillStyle=BK;ctx.textBaseline='top';
+  ctx.fillText('RETURN TO PREVIOUS PAGE',DATA.nav.x+UI_PX,btnY+bpy2);
+  ctx.fillStyle=PINK;ctx.fillRect(DATA.nav.x+btn1W+btnGap,btnY,btn2W,btnH);
+  ctx.fillText('SKIP TO NEXT PAGE',DATA.nav.x+btn1W+btnGap+UI_PX,btnY+bpy2);
 
   cmdBox(ctx,W,H,'NAVIGATION — movement !== access');
   xhair(ctx,cv);
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   EXIT — same rect system, fixed center start, perspective evasion
-   Buttons start in fixed center position.
-   On cursor approach: evade with X/Y move + rotation + scale tilt.
+   EXIT — 3D door-fold effect
+   At rest: two buttons appear as flat lime boxes, side by side.
+   On hover EXIT: left edge is hinge — rect folds inward (rotateY)
+   On hover STAY: right edge is hinge — rect folds from opposite side.
+   Uses CSS 3D perspective on DOM buttons + canvas background.
 ═══════════════════════════════════════════════════════════════ */
 function initExit(){if(DATA.exit.inited) return;DATA.exit.inited=true;wireExitButtons();}
 
 function wireExitButtons(){
   const be=$('btn-exit'),bs=$('btn-stay');if(!be||be.dataset.wired) return;
   be.dataset.wired='1';bs.dataset.wired='1';
-  DATA.exit.evx=0;DATA.exit.evy=0;DATA.exit.svx=0;DATA.exit.svy=0;
+  DATA.exit.efold=0;DATA.exit.sfold=0;
+
   be.addEventListener('click',e=>{
     e.preventDefault();DATA.exit.tries++;
     if(DATA.exit.tries>=4){setTimeout(()=>{const idx=allSections.findIndex(s=>s.id==='s-bottom');if(idx>=0) snapToIndex(idx,true);},400);}
@@ -925,40 +863,31 @@ function wireExitButtons(){
 }
 
 function updateExit(){
-  const W=window.innerWidth,H=window.innerHeight;
-  const container=$('exit-btns');if(!container) return;
-  const off=container.getBoundingClientRect();
-  const ox=off.left+off.width/2,oy=off.top+off.height/2;
+  if(!$('btn-exit')) return;
 
-  [['btn-exit','evx','evy'],['btn-stay','svx','svy']].forEach(([id,vxk,vyk])=>{
-    const btn=$(id);if(!btn) return;
-    const br=btn.getBoundingClientRect();
-    const bx=br.left+br.width/2,by=br.top+br.height/2;
+  /* Measure cursor relative to each button */
+  const be=$('btn-exit'),bs=$('btn-stay');
 
-    /* Target: fixed neutral position (no drift) */
-    const tNx=id==='btn-exit'?ox-100:ox+100;
-    const tNy=oy;
+  /* EXIT — left-edge hinge fold */
+  const beR=be.getBoundingClientRect();
+  const beD=MX>0?Math.hypot(beR.left+beR.width/2-MX,beR.top+beR.height/2-MY):999;
+  const eFold=MX>0&&beD<180?Math.max(0,(180-beD)/180):0;
+  DATA.exit.efold=lerp(DATA.exit.efold,eFold,0.12);
+  const eAng=DATA.exit.efold*-72; /* fold inward up to -72deg */
+  /* Transform-origin left center = hinge at left edge */
+  be.style.transformOrigin='left center';
+  be.style.transition='transform .08s linear';
+  be.style.transform=`perspective(600px) rotateY(${eAng}deg) translateZ(${DATA.exit.efold*-30}px)`;
 
-    /* Evasion vector: push away from cursor */
-    const d=Math.hypot(bx-MX,by-MY);
-    const evade=MX>0&&d<140?Math.max(0,(140-d)/140):0;
-    const ang=MX>0?Math.atan2(by-MY,bx-MX):0;
-
-    /* Target with evasion */
-    const tx=(tNx-ox)+Math.cos(ang)*evade*80;
-    const ty=(tNy-oy)+Math.sin(ang)*evade*60;
-
-    DATA.exit[vxk]=lerp(DATA.exit[vxk],tx,0.12);
-    DATA.exit[vyk]=lerp(DATA.exit[vyk],ty,0.12);
-
-    /* Perspective tilt: rotate and scale based on evasion */
-    const rot=evade*18*(bx>W/2?1:-1);
-    const tilt=evade*0.12;
-    const scl=1+evade*0.06;
-
-    btn.style.transition='transform .06s linear';
-    btn.style.transform=`translate(${DATA.exit[vxk]}px,${DATA.exit[vyk]}px) rotate(${rot}deg) scale(${scl}) perspective(400px) rotateY(${tilt*45}deg)`;
-  });
+  /* STAY — right-edge hinge fold */
+  const bsR=bs.getBoundingClientRect();
+  const bsD=MX>0?Math.hypot(bsR.left+bsR.width/2-MX,bsR.top+bsR.height/2-MY):999;
+  const sFold=MX>0&&bsD<180?Math.max(0,(180-bsD)/180):0;
+  DATA.exit.sfold=lerp(DATA.exit.sfold,sFold,0.12);
+  const sAng=DATA.exit.sfold*72; /* fold inward up to +72deg */
+  bs.style.transformOrigin='right center';
+  bs.style.transition='transform .08s linear';
+  bs.style.transform=`perspective(600px) rotateY(${sAng}deg) translateZ(${DATA.exit.sfold*-30}px)`;
 }
 
 function renderExit(cv){
