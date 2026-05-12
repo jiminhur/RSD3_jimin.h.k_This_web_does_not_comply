@@ -40,20 +40,31 @@ html,body{
 }
 .hide{display:none!important;}
 
-/* ══ LOADER — pure lime full screen, zooms inward then fades ══ */
-#loader{
-  position:fixed;inset:0;z-index:50000;
-  background:#ccff00;   /* start as full vivid lime — no image needed */
-  overflow:hidden;
+/* ══ LOADER — original strip system + quick lime flash ══ */
+#loader{position:fixed;inset:0;z-index:50000;background:#c8c8c8;overflow:hidden;}
+#ld-strip{
+  position:absolute;top:0;left:0;width:900vw;height:100vh;
+  display:flex;font-size:0;transition:transform .6s cubic-bezier(.25,.46,.45,.94);
 }
+#ld-strip.el{transition:transform .6s cubic-bezier(.68,-.3,.27,1.3);}
+#ld-strip img{width:100vw;height:100vh;object-fit:cover;flex-shrink:0;display:block;}
+#ld-logo{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:clamp(200px,40vw,520px);z-index:5;opacity:0;transition:opacity .5s;pointer-events:none;
+}
+#ld-logo.vis{opacity:1;}
 #ld-lime{
-  position:absolute;inset:0;
-  background:#ccff00;
-  /* Already full screen — transform scales it for the zoom-in feel */
-  transform-origin:center center;
+  position:fixed;inset:0;z-index:6;
+  background:var(--lime);
+  opacity:0;pointer-events:none;
+  transition:opacity .35s ease;
 }
-/* Logo hidden — loader is purely lime, no image asset */
-#ld-logo{display:none!important;}
+#ld-lime.flash{opacity:1;}
+#ld-pct{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+  font-family:var(--mon);font-size:10px;color:var(--bk);
+  opacity:.4;z-index:7;letter-spacing:.08em;font-weight:500;
+}
 
 /* ══ TOP BAR ══ */
 #bar{
@@ -109,8 +120,9 @@ section{width:100%;height:100vh;position:relative;overflow:hidden;flex-shrink:0;
   object-fit:cover;object-position:center;display:block;z-index:0;
 }
 
-/* ══ BOTTOM — unchanged ══ */
+/* ══ BOTTOM / LANDING — unchanged ══ */
 .bottom-sec{background:#c8c8c8;}
+.theme-sec{background:#eeeeec;}
 .bottom-err{z-index:1;animation:errPulse 3s ease-out infinite;}
 @keyframes errPulse{
   0%,85%,100%{opacity:0;}2%{opacity:1;}15%{opacity:.95;}40%{opacity:.4;}70%{opacity:.08;}
@@ -120,29 +132,27 @@ section{width:100%;height:100vh;position:relative;overflow:hidden;flex-shrink:0;
 .game-sec,.s-stage{position:relative;overflow:hidden;background:var(--bg);}
 .full-cv,.stage-cv{position:absolute;inset:0;z-index:2;cursor:none;}
 
-/* ══ EXIT DOM BUTTONS — fill lime rect as one giant divided surface ══ */
+/* ══ EXIT DOM BUTTONS — fill lime rect, architectural door fold ══ */
 .exit-buttons{
   position:absolute;
-  /* Match lime rect geometry exactly */
-  left:5%;top:4%;
-  width:90%;height:84%;
+  left:5%;top:4%;width:90%;height:84%;
   z-index:7;display:flex;gap:0;pointer-events:auto;
-  /* Perspective container for child 3D transforms */
-  perspective:800px;
+  perspective:900px;
   transform-style:preserve-3d;
+  overflow:hidden;  /* prevents lime bg strip from showing on edges */
 }
 .exit-btn{
   font-family:var(--mon);font-size:clamp(18px,2.8vw,38px);letter-spacing:.12em;
   text-transform:uppercase;font-weight:500;color:var(--bk);
   background:var(--pink);border:none;
-  /* Each button takes exactly half the container */
   flex:1;height:100%;
-  cursor:none;text-align:center;
-  /* Vertical centering */
+  cursor:none;
   display:flex;align-items:center;justify-content:center;
   transition:background .12s,color .12s;
   position:relative;
   transform-style:preserve-3d;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
 }
 .exit-btn:hover{background:var(--bk);color:var(--pink);}
 .exit-btn.stay{background:var(--lime);}
