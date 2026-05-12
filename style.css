@@ -40,31 +40,8 @@ html,body{
 }
 .hide{display:none!important;}
 
-/* ══ LOADER — original strip system + quick lime flash ══ */
-#loader{position:fixed;inset:0;z-index:50000;background:#c8c8c8;overflow:hidden;}
-#ld-strip{
-  position:absolute;top:0;left:0;width:900vw;height:100vh;
-  display:flex;font-size:0;transition:transform .6s cubic-bezier(.25,.46,.45,.94);
-}
-#ld-strip.el{transition:transform .6s cubic-bezier(.68,-.3,.27,1.3);}
-#ld-strip img{width:100vw;height:100vh;object-fit:cover;flex-shrink:0;display:block;}
-#ld-logo{
-  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-  width:clamp(200px,40vw,520px);z-index:5;opacity:0;transition:opacity .5s;pointer-events:none;
-}
-#ld-logo.vis{opacity:1;}
-#ld-lime{
-  position:fixed;inset:0;z-index:6;
-  background:var(--lime);
-  opacity:0;pointer-events:none;
-  transition:opacity .35s ease;
-}
-#ld-lime.flash{opacity:1;}
-#ld-pct{
-  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
-  font-family:var(--mon);font-size:10px;color:var(--bk);
-  opacity:.4;z-index:7;letter-spacing:.08em;font-weight:500;
-}
+/* ══ LOADER — hidden, no loading sequence ══ */
+#loader{display:none!important;}
 
 /* ══ TOP BAR ══ */
 #bar{
