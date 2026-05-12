@@ -57,31 +57,58 @@ const DATA={
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   LOADER — pure lime full screen, holds 2.5s, zooms inward + fades
+   LOADER — original strip system, faster pacing, lime flash exit
 ═══════════════════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded',()=>{
-  const ldr=$('loader');
+/* Per-stage lock durations in seconds */
+const LOCK_BY_STAGE = {
+  0: 5,   /* game */
+  1: 10,  /* scrolling */
+  2: 10,  /* selection */
+  3: 10,  /* readability */
+  4: 5,   /* navigation */
+  5: 10   /* exit */
+};
+function lockSecFor(stage){ return LOCK_BY_STAGE[stage] ?? 10; }
 
-  /* After 2.5s: scale lime up slightly (zoom INTO the surface feel), fade out */
-  setTimeout(()=>{
-    const lm=$('ld-lime');
-    if(lm){
-      lm.style.transition='transform 0.55s cubic-bezier(.4,0,.6,1), opacity 0.45s ease';
-      lm.style.transform='scale(1.14)';
-      lm.style.opacity='0';
-    }
-    ldr.style.transition='opacity 0.45s ease 0.1s';
-    ldr.style.opacity='0';
-    setTimeout(()=>{ldr.style.display='none';startWebsite();},560);
-  },2500);
+document.addEventListener('DOMContentLoaded',()=>{
+  const strip=$('ld-strip'),logo=$('ld-logo'),pct=$('ld-pct'),
+        ldr=$('loader'),lm=$('ld-lime');
+
+  /* Show logo quickly */
+  setTimeout(()=>logo.classList.add('vis'),200);
+
+  /* Strip cycles — faster: 4 steps at 500ms each = 2s total */
+  let sl=0;
+  const go=()=>{
+    if(++sl>=5){ pct.textContent='80%'; setTimeout(finish,300); return; }
+    pct.textContent=Math.floor(sl/5*80)+'%';
+    strip.classList.add('el');
+    strip.style.transform=`translateX(-${sl*100}vw)`;
+    setTimeout(()=>strip.classList.remove('el'),550);
+    setTimeout(go,500);
+  };
+  setTimeout(go,400);
+
+  function finish(){
+    pct.textContent='100%';
+    logo.classList.remove('vis');
+    /* Quick lime flash — 350ms */
+    lm.classList.add('flash');
+    setTimeout(()=>{
+      ldr.style.transition='opacity .4s';
+      ldr.style.opacity='0';
+      setTimeout(()=>{ ldr.style.display='none'; startWebsite(); },400);
+    },350);
+  }
 });
 
 function startWebsite(){
   $('bar')?.classList.remove('hide');$('sc')?.classList.remove('hide');
   buildStages();buildSectionIndex();
   wireBar();wireMouse();wireSnap();wireScrollFeed();
+  /* Land on the original landing page (s-theme) */
   requestAnimationFrame(()=>{
-    const idx=allSections.findIndex(s=>s.id==='s-game');
+    const idx=allSections.findIndex(s=>s.id==='s-theme');
     if(idx>=0){snapToIndex(idx,false);minReachableStage=idx;}
   });
   requestAnimationFrame(loop);
@@ -154,7 +181,8 @@ function wireSnap(){
 
 function canLeaveUp(){
   if(activeStage<0) return true;
-  if((performance.now()-stageEnteredAt)/1000>=LOCK_SEC) return true;
+  const lockSec=lockSecFor(activeStage);
+  if((performance.now()-stageEnteredAt)/1000>=lockSec) return true;
   showFailed();return false;
 }
 
@@ -181,7 +209,7 @@ function snapToIndex(idx,animate){
 
 function onEnter(sec){
   const id=sec.id;
-  if(id==='s-bottom'){activeStage=-1;updateBar(-1);hideLock();return;}
+  if(id==='s-bottom'||id==='s-theme'){activeStage=-1;updateBar(-1);hideLock();return;}
   if(id==='s-game'){
     activeStage=0;stageEnteredAt=performance.now();
     updateBar(0);showLock();wireGame();return;
@@ -279,15 +307,15 @@ const UI_Y_OFF = 6;               /* gap between rect bottom and boxes */
 function drawUI(ctx,W,H,cmdText){
   const rectRight  = W*(RX_F+RW_F);
   const rectBottom = H*(RY_F+RH_F);
-  const by = rectBottom + UI_Y_OFF;   /* BELOW the lime rect */
+  const by = rectBottom + UI_Y_OFF;
 
-  /* Single font declaration — both boxes use exactly the same FM(FS) */
   ctx.font=FM(FS);
   ctx.textBaseline='top';
 
-  /* ── Lock box — sentence case, right-aligned to rect right edge ── */
+  /* Lock box — sentence case, right-aligned to rect right edge */
+  const lockSec=lockSecFor(activeStage);
   const elapsed=(performance.now()-stageEnteredAt)/1000;
-  const rem=Math.max(0,LOCK_SEC-elapsed);
+  const rem=Math.max(0,lockSec-elapsed);
   const lockTxt=rem>0?'Locked — '+Math.ceil(rem)+'s':'Unlocked';
   const ltw=ctx.measureText(lockTxt).width;
   const lbw=ltw+UI_PX*2;
@@ -295,7 +323,7 @@ function drawUI(ctx,W,H,cmdText){
   ctx.fillStyle=RECT;ctx.fillRect(lbx,by,lbw,UI_BH);
   ctx.fillStyle=BK;ctx.fillText(lockTxt,lbx+UI_PX,by+UI_PY);
 
-  /* ── Command box — centered, same font, same height ── */
+  /* Command box — centered, same font/height */
   const ctw=ctx.measureText(cmdText).width;
   const cbw=ctw+UI_PX*2;
   const cbx=W/2-cbw/2;
@@ -565,7 +593,7 @@ function renderScrolling(cv){
   };
 
   drawSpatialCol(COL1,px+16);
-  drawSpatialCol(COL2,px+colW+24);
+  drawSpatialCol(COL2,px+colW*0.52+8);  /* shifted left from colW+24 */
 
   ctx.restore();
   cmdBox(ctx,W,H,'SCROLL_LOCKED = true');
@@ -651,14 +679,22 @@ function renderSelection(cv){
     ctx.beginPath();ctx.moveTo(fn.x+fn.w/2,fn.y+fn.h/2);ctx.lineTo(tn.x+tn.w/2,tn.y+tn.h/2);ctx.stroke();
   });
 
-  /* Nodes */
+  /* Nodes — evasive: sharp dodge when cursor near */
   DATA.sel.nodes.forEach(n=>{
-    if(!n.still&&chaos&&cxM>0){
+    if(!n.still&&cxM>0){
       const dx=(n.x+(n.w||80)/2)-cxM,dy=(n.y+n.h/2)-cyM;
       const d=Math.hypot(dx,dy);
-      if(d<120){const f=(120-d)/120;n.vx+=(dx/Math.max(d,1))*f*3.5;n.vy+=(dy/Math.max(d,1))*f*2.8;}
+      const radius=chaos?150:90;
+      if(d<radius){
+        const f=(radius-d)/radius;
+        /* Sharp burst: quadratic force + random sideways kick */
+        const force=f*f*12;
+        n.vx+=(dx/Math.max(d,1))*force + rnd(-3,3)*f;
+        n.vy+=(dy/Math.max(d,1))*force + rnd(-2,2)*f;
+      }
     }
-    n.vx*=0.84;n.vy*=0.84;n.x+=n.vx;n.y+=n.vy;
+    n.vx*=0.80;n.vy*=0.80;  /* faster decay = snappier stop */
+    n.x+=n.vx;n.y+=n.vy;
     n.x=clamp(n.x,4,W-170);n.y=clamp(n.y,H*0.04,H*0.95);
     ctx.font=FM(FS);const tw=ctx.measureText(n.text).width;
     const bpx=10,bpy=7;n.w=tw+bpx*2;n.h=FS+bpy*2;
@@ -742,7 +778,7 @@ function initReadability(){
       const idx=Math.floor(Math.random()*DATA.read.words.length);
       /* Direction: pick from all quadrants — left/right/up/down/diagonal */
       const dirAngle=rnd(0,Math.PI*2);
-      const dirDist=rnd(180,420);
+      const dirDist=rnd(180,500);  /* wider, reaches further left too */
       DATA.read.eruptions.push({
         wordIdx:idx,
         targetFs:rnd(90,380),      /* wider range — some huge, some small */
@@ -784,10 +820,12 @@ function renderReadability(cv){
       const d=Math.hypot(wx2-cx,wy2-cy);
       if(d<150){const f=(150-d)/150;w.vox+=(wx2-cx)*f*0.12;w.voy+=(wy2-cy)*f*0.09;w.currentFs=lerp(w.currentFs,w.baseFs*5,f*0.4);}
     }
-    w.vox+=(0-w.ox)*0.052;w.voy+=(0-w.oy)*0.052;w.vox*=0.74;w.voy*=0.74;
+    /* Slower spring = distortion stays alive longer */
+    w.vox+=(0-w.ox)*0.028;w.voy+=(0-w.oy)*0.028;
+    w.vox*=0.82;w.voy*=0.82;
     w.ox+=w.vox;w.oy+=w.voy;
-    w.currentFs+=(w.baseFs-w.currentFs)*0.038;
-    w.scaleX+=(1-w.scaleX)*0.042;w.scaleY+=(1-w.scaleY)*0.042;
+    w.currentFs+=(w.baseFs-w.currentFs)*0.022;  /* slower fs return */
+    w.scaleX+=(1-w.scaleX)*0.028;w.scaleY+=(1-w.scaleY)*0.028;
     ctx.save();ctx.translate(w.gx+w.ox,w.gy+w.oy);
     ctx.transform(1,0,w.skewX,w.scaleY,0,0);ctx.scale(w.scaleX,1);
     ctx.font=FM(w.currentFs);ctx.fillStyle=BK;ctx.textBaseline='top';ctx.fillText(w.text,0,0);
@@ -873,24 +911,30 @@ function renderNavigation(cv){
     else ctx.fillText(line,DATA.nav.x+padX,DATA.nav.y+padY+i*lineH);
   });
 
-  /* Buttons — pale pink, sentence case, FS, left-aligned to block left edge */
+  /* Buttons — pale pink, sentence case, FS.
+     Left edge of btn1 = DATA.nav.x + padX, matching the paragraph text indent. */
   const btnY=DATA.nav.y+blockH+btnGap;
   const bpy2=(btnH-FS)/2;
   ctx.font=FM(FS);
 
-  /* BUTTON 1: left edge = DATA.nav.x (same as paragraph) */
-  ctx.fillStyle=PINK;ctx.fillRect(DATA.nav.x,btnY,halfW,btnH);
+  /* Text inside paragraph starts at DATA.nav.x+padX — buttons match that left edge */
+  const btnLeft=DATA.nav.x+padX;
+  /* Each button: half of (blockW - 2*padX - btnGap) so both fit within text area */
+  const btnEachW=(blockW-padX*2-btnGap)/2;
+
+  /* BUTTON 1 */
+  ctx.fillStyle=PINK;ctx.fillRect(btnLeft,btnY,btnEachW,btnH);
   ctx.save();
-  ctx.beginPath();ctx.rect(DATA.nav.x,btnY,halfW,btnH);ctx.clip();
+  ctx.beginPath();ctx.rect(btnLeft,btnY,btnEachW,btnH);ctx.clip();
   ctx.fillStyle=BK;ctx.textBaseline='top';
-  ctx.fillText(btnTxt1,DATA.nav.x+UI_PX,btnY+bpy2);
+  ctx.fillText(btnTxt1,btnLeft+UI_PX,btnY+bpy2);
   ctx.restore();
 
-  /* BUTTON 2: left edge = DATA.nav.x + halfW + gap */
-  const btn2X=DATA.nav.x+halfW+btnGap;
-  ctx.fillStyle=PINK;ctx.fillRect(btn2X,btnY,halfW,btnH);
+  /* BUTTON 2 */
+  const btn2X=btnLeft+btnEachW+btnGap;
+  ctx.fillStyle=PINK;ctx.fillRect(btn2X,btnY,btnEachW,btnH);
   ctx.save();
-  ctx.beginPath();ctx.rect(btn2X,btnY,halfW,btnH);ctx.clip();
+  ctx.beginPath();ctx.rect(btn2X,btnY,btnEachW,btnH);ctx.clip();
   ctx.fillStyle=BK;ctx.textBaseline='top';
   ctx.fillText(btnTxt2,btn2X+UI_PX,btnY+bpy2);
   ctx.restore();
@@ -924,29 +968,54 @@ function updateExit(){
   if(!$('btn-exit')) return;
   const be=$('btn-exit'),bs=$('btn-stay');
 
-  /* EXIT — left-edge hinge. Folds AWAY from viewer (door opens inward into depth).
-     rotateY negative = left side moves away. translateZ negative = recedes. */
   const beR=be.getBoundingClientRect();
-  const beD=MX>0?Math.hypot(beR.left+beR.width/2-MX,beR.top+beR.height/2-MY):999;
-  const eFold=MX>0&&beD<220?Math.max(0,(220-beD)/220):0;
-  DATA.exit.efold=lerp(DATA.exit.efold,eFold,0.10);
-  /* Fold inward: rotateY goes negative (left hinge, right side recedes away).
-     translateZ stays negative — always pushes into depth, never toward viewer. */
-  const eAng=DATA.exit.efold*-82;
-  be.style.transformOrigin='left center';
-  be.style.transition='transform .06s linear';
-  be.style.transform=`perspective(700px) rotateY(${eAng}deg) translateZ(${DATA.exit.efold*-80}px)`;
-
-  /* STAY — right-edge hinge. Folds AWAY from viewer in opposite direction. */
   const bsR=bs.getBoundingClientRect();
+  const beD=MX>0?Math.hypot(beR.left+beR.width/2-MX,beR.top+beR.height/2-MY):999;
   const bsD=MX>0?Math.hypot(bsR.left+bsR.width/2-MX,bsR.top+bsR.height/2-MY):999;
-  const sFold=MX>0&&bsD<220?Math.max(0,(220-bsD)/220):0;
-  DATA.exit.sfold=lerp(DATA.exit.sfold,sFold,0.10);
-  /* Right hinge: rotateY positive folds right side away into depth. */
-  const sAng=DATA.exit.sfold*82;
+
+  /* How much cursor is near each button */
+  const eFold=MX>0&&beD<260?Math.max(0,(260-beD)/260):0;
+  const sFold=MX>0&&bsD<260?Math.max(0,(260-bsD)/260):0;
+  DATA.exit.efold=lerp(DATA.exit.efold,eFold,0.09);
+  DATA.exit.sfold=lerp(DATA.exit.sfold,sFold,0.09);
+
+  /* ── EXIT button ──
+     When cursor approaches EXIT: EXIT folds AWAY into depth (recedes).
+     Simultaneously STAY pushes FORWARD aggressively (system resists exit).
+     STAY protrusion is much stronger: translateZ up to +180px toward viewer.
+     When cursor approaches STAY: EXIT also attempts to rise but weakly (+40px). */
+  const stayPushFromExit = DATA.exit.efold;   /* how hard cursor pushes at EXIT */
+  const exitPullFromStay = DATA.exit.sfold;    /* cursor on STAY = EXIT weakly rises */
+
+  /* EXIT: recedes when approached, slight oscillation */
+  const eDepth = DATA.exit.efold*-100 + Math.sin(T*0.35)*DATA.exit.efold*30;
+  const eAng   = DATA.exit.efold*-74;
+  /* Small sympathetic rise when cursor is on STAY */
+  const eRise  = exitPullFromStay*40;
+  be.style.transformOrigin='left center';
+  be.style.transition='none';
+  be.style.transform=`perspective(900px) rotateY(${eAng}deg) translateZ(${eDepth+eRise}px) scaleY(${1-DATA.exit.efold*0.06})`;
+
+  /* STAY: when EXIT is approached, STAY pushes dramatically FORWARD.
+     translateZ positive = toward viewer. Scale up = dominates screen.
+     Right-edge hinge — left side swings forward. */
+  const sPushZ  = stayPushFromExit*180;       /* up to 180px toward viewer */
+  const sPushSc = 1 + stayPushFromExit*0.28;  /* up to 1.28× scale */
+  const sAngExit= stayPushFromExit*-22;        /* slight tilt for 3D feel */
+  /* Also reacts when cursor is directly on STAY */
+  const sDepthSelf = DATA.exit.sfold*-80 + Math.sin(T*0.35+Math.PI)*DATA.exit.sfold*25;
+  const sAngSelf   = DATA.exit.sfold*72;
+  /* Combine: STAY prioritises the EXIT-triggered protrusion */
+  const dominant = stayPushFromExit > DATA.exit.sfold;
   bs.style.transformOrigin='right center';
-  bs.style.transition='transform .06s linear';
-  bs.style.transform=`perspective(700px) rotateY(${sAng}deg) translateZ(${DATA.exit.sfold*-80}px)`;
+  bs.style.transition='none';
+  if(dominant){
+    /* EXIT hovered: STAY surges forward, rotates slightly, fills space */
+    bs.style.transform=`perspective(900px) translateZ(${sPushZ}px) rotateY(${sAngExit}deg) scale(${sPushSc})`;
+  } else {
+    /* STAY hovered: STAY folds away (same recession as EXIT) */
+    bs.style.transform=`perspective(900px) rotateY(${sAngSelf}deg) translateZ(${sDepthSelf}px)`;
+  }
 }
 
 function renderExit(cv){
