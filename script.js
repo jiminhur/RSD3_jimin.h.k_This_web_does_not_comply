@@ -593,7 +593,7 @@ function renderScrolling(cv){
   };
 
   drawSpatialCol(COL1,px+16);
-  drawSpatialCol(COL2,px+colW*0.52+8);  /* shifted left from colW+24 */
+  drawSpatialCol(COL2,W*0.5);  /* right col starts at stage midpoint — matches index label */
 
   ctx.restore();
   cmdBox(ctx,W,H,'SCROLL_LOCKED = true');
@@ -759,7 +759,9 @@ function initReadability(){
   const lineH=Math.round(FS*1.68);
   const tmp=document.createElement('canvas').getContext('2d');tmp.font=FM(FS);
   const lines=READ_TXT.split('\n');const half=Math.ceil(lines.length/2);
-  [[lines.slice(0,half),rx],[lines.slice(half),rx+colW+20]].forEach(([ls,gx])=>{
+  /* Right col starts at W*0.5 — same reference as scrolling right column */
+  const col2X=W*0.5;
+  [[lines.slice(0,half),rx],[lines.slice(half),col2X]].forEach(([ls,gx])=>{
     let gy=ry;
     ls.forEach(line=>{
       let cx2=gx;
@@ -973,48 +975,50 @@ function updateExit(){
   const beD=MX>0?Math.hypot(beR.left+beR.width/2-MX,beR.top+beR.height/2-MY):999;
   const bsD=MX>0?Math.hypot(bsR.left+bsR.width/2-MX,bsR.top+bsR.height/2-MY):999;
 
-  /* How much cursor is near each button */
-  const eFold=MX>0&&beD<260?Math.max(0,(260-beD)/260):0;
-  const sFold=MX>0&&bsD<260?Math.max(0,(260-bsD)/260):0;
+  const eFold=MX>0&&beD<280?Math.max(0,(280-beD)/280):0;
+  const sFold=MX>0&&bsD<280?Math.max(0,(280-bsD)/280):0;
   DATA.exit.efold=lerp(DATA.exit.efold,eFold,0.09);
   DATA.exit.sfold=lerp(DATA.exit.sfold,sFold,0.09);
 
   /* ── EXIT button ──
-     When cursor approaches EXIT: EXIT folds AWAY into depth (recedes).
-     Simultaneously STAY pushes FORWARD aggressively (system resists exit).
-     STAY protrusion is much stronger: translateZ up to +180px toward viewer.
-     When cursor approaches STAY: EXIT also attempts to rise but weakly (+40px). */
-  const stayPushFromExit = DATA.exit.efold;   /* how hard cursor pushes at EXIT */
-  const exitPullFromStay = DATA.exit.sfold;    /* cursor on STAY = EXIT weakly rises */
+     When cursor approaches EXIT: EXIT folds deeply away.
+     Oscillation adds spatial tension. */
+  const eDepth = DATA.exit.efold*-130 + Math.sin(T*0.35)*DATA.exit.efold*35;
+  const eAng   = DATA.exit.efold*-78;
 
-  /* EXIT: recedes when approached, slight oscillation */
-  const eDepth = DATA.exit.efold*-100 + Math.sin(T*0.35)*DATA.exit.efold*30;
-  const eAng   = DATA.exit.efold*-74;
-  /* Small sympathetic rise when cursor is on STAY */
-  const eRise  = exitPullFromStay*40;
+  /* When STAY is approached, EXIT surges forward — aggressively but less than STAY */
+  const eForwardFromStay = DATA.exit.sfold*160;
+
   be.style.transformOrigin='left center';
   be.style.transition='none';
-  be.style.transform=`perspective(900px) rotateY(${eAng}deg) translateZ(${eDepth+eRise}px) scaleY(${1-DATA.exit.efold*0.06})`;
+  const dominant_stay = DATA.exit.sfold > DATA.exit.efold;
+  if(dominant_stay){
+    /* Cursor on STAY: EXIT surges forward */
+    be.style.transform=`perspective(700px) translateZ(${eForwardFromStay}px) rotateY(${DATA.exit.sfold*18}deg) scale(${1+DATA.exit.sfold*0.18})`;
+  } else {
+    be.style.transform=`perspective(900px) rotateY(${eAng}deg) translateZ(${eDepth}px) scaleY(${1-DATA.exit.efold*0.06})`;
+  }
 
-  /* STAY: when EXIT is approached, STAY pushes dramatically FORWARD.
-     translateZ positive = toward viewer. Scale up = dominates screen.
-     Right-edge hinge — left side swings forward. */
-  const sPushZ  = stayPushFromExit*180;       /* up to 180px toward viewer */
-  const sPushSc = 1 + stayPushFromExit*0.28;  /* up to 1.28× scale */
-  const sAngExit= stayPushFromExit*-22;        /* slight tilt for 3D feel */
-  /* Also reacts when cursor is directly on STAY */
-  const sDepthSelf = DATA.exit.sfold*-80 + Math.sin(T*0.35+Math.PI)*DATA.exit.sfold*25;
-  const sAngSelf   = DATA.exit.sfold*72;
-  /* Combine: STAY prioritises the EXIT-triggered protrusion */
-  const dominant = stayPushFromExit > DATA.exit.sfold;
+  /* ── STAY button — system-preferred, responds much more aggressively ──
+     When EXIT is approached: STAY surges dramatically toward viewer.
+     translateZ +320px, scale 1.6× — nearly doubles in apparent size.
+     Slight rotateY tilt gives it architectural 3D feel. */
+  const stayPushZ  = DATA.exit.efold*320;
+  const stayPushSc = 1 + DATA.exit.efold*0.55;
+  const stayTilt   = DATA.exit.efold*-28;
+
+  /* When STAY directly approached: STAY folds away (same recession logic) */
+  const sDepth = DATA.exit.sfold*-130 + Math.sin(T*0.35+Math.PI)*DATA.exit.sfold*35;
+  const sAng   = DATA.exit.sfold*76;
+
   bs.style.transformOrigin='right center';
   bs.style.transition='none';
-  if(dominant){
-    /* EXIT hovered: STAY surges forward, rotates slightly, fills space */
-    bs.style.transform=`perspective(900px) translateZ(${sPushZ}px) rotateY(${sAngExit}deg) scale(${sPushSc})`;
+  const dominant_exit = DATA.exit.efold > DATA.exit.sfold;
+  if(dominant_exit){
+    /* Cursor on EXIT: STAY surges massively forward — spatially oppressive */
+    bs.style.transform=`perspective(700px) translateZ(${stayPushZ}px) rotateY(${stayTilt}deg) scale(${stayPushSc})`;
   } else {
-    /* STAY hovered: STAY folds away (same recession as EXIT) */
-    bs.style.transform=`perspective(900px) rotateY(${sAngSelf}deg) translateZ(${sDepthSelf}px)`;
+    bs.style.transform=`perspective(900px) rotateY(${sAng}deg) translateZ(${sDepth}px)`;
   }
 }
 
