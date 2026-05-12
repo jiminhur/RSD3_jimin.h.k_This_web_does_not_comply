@@ -56,9 +56,6 @@ const DATA={
   exit:{tries:0,inited:false,efold:0,sfold:0}
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   LOADER — original strip system, faster pacing, lime flash exit
-═══════════════════════════════════════════════════════════════ */
 /* Per-stage lock durations in seconds */
 const LOCK_BY_STAGE = {
   0: 5,   /* game */
@@ -70,46 +67,21 @@ const LOCK_BY_STAGE = {
 };
 function lockSecFor(stage){ return LOCK_BY_STAGE[stage] ?? 10; }
 
+/* No loader — start immediately */
 document.addEventListener('DOMContentLoaded',()=>{
-  const strip=$('ld-strip'),logo=$('ld-logo'),pct=$('ld-pct'),
-        ldr=$('loader'),lm=$('ld-lime');
-
-  /* Show logo quickly */
-  setTimeout(()=>logo.classList.add('vis'),200);
-
-  /* Strip cycles — faster: 4 steps at 500ms each = 2s total */
-  let sl=0;
-  const go=()=>{
-    if(++sl>=5){ pct.textContent='80%'; setTimeout(finish,300); return; }
-    pct.textContent=Math.floor(sl/5*80)+'%';
-    strip.classList.add('el');
-    strip.style.transform=`translateX(-${sl*100}vw)`;
-    setTimeout(()=>strip.classList.remove('el'),550);
-    setTimeout(go,500);
-  };
-  setTimeout(go,400);
-
-  function finish(){
-    pct.textContent='100%';
-    logo.classList.remove('vis');
-    /* Quick lime flash — 350ms */
-    lm.classList.add('flash');
-    setTimeout(()=>{
-      ldr.style.transition='opacity .4s';
-      ldr.style.opacity='0';
-      setTimeout(()=>{ ldr.style.display='none'; startWebsite(); },400);
-    },350);
-  }
+  const ldr=$('loader');
+  if(ldr) ldr.style.display='none';
+  startWebsite();
 });
 
 function startWebsite(){
   $('bar')?.classList.remove('hide');$('sc')?.classList.remove('hide');
   buildStages();buildSectionIndex();
   wireBar();wireMouse();wireSnap();wireScrollFeed();
-  /* Land on the original landing page (s-theme) */
+  /* Start at s-theme — second from bottom, no animation */
   requestAnimationFrame(()=>{
     const idx=allSections.findIndex(s=>s.id==='s-theme');
-    if(idx>=0){snapToIndex(idx,false);minReachableStage=idx;}
+    if(idx>=0){ snapToIndex(idx,false); minReachableStage=idx; }
   });
   requestAnimationFrame(loop);
 }
@@ -593,7 +565,7 @@ function renderScrolling(cv){
   };
 
   drawSpatialCol(COL1,px+16);
-  drawSpatialCol(COL2,W*0.5);  /* right col starts at stage midpoint — matches index label */
+  drawSpatialCol(COL2,W*0.44);  /* right col: left edge of SCROLLING nav tab */
 
   ctx.restore();
   cmdBox(ctx,W,H,'SCROLL_LOCKED = true');
@@ -759,8 +731,8 @@ function initReadability(){
   const lineH=Math.round(FS*1.68);
   const tmp=document.createElement('canvas').getContext('2d');tmp.font=FM(FS);
   const lines=READ_TXT.split('\n');const half=Math.ceil(lines.length/2);
-  /* Right col starts at W*0.5 — same reference as scrolling right column */
-  const col2X=W*0.5;
+  /* Right col at W*0.44 — left edge of READABILITY nav tab (same rule as scrolling) */
+  const col2X=W*0.44;
   [[lines.slice(0,half),rx],[lines.slice(half),col2X]].forEach(([ls,gx])=>{
     let gy=ry;
     ls.forEach(line=>{
@@ -959,11 +931,19 @@ function wireExitButtons(){
   be.dataset.wired='1';bs.dataset.wired='1';
   DATA.exit.efold=0;DATA.exit.sfold=0;
 
+  /* LEFT side (btn-exit DOM position) — always loops/fails regardless of label shown */
   be.addEventListener('click',e=>{
     e.preventDefault();DATA.exit.tries++;
-    if(DATA.exit.tries>=4){setTimeout(()=>{const idx=allSections.findIndex(s=>s.id==='s-bottom');if(idx>=0) snapToIndex(idx,true);},400);}
+    if(DATA.exit.tries>=4){
+      /* Even after many clicks on left, returns to bottom — no escape */
+      setTimeout(()=>{const idx=allSections.findIndex(s=>s.id==='s-bottom');if(idx>=0) snapToIndex(idx,true);},400);
+    }
   });
-  bs.addEventListener('click',e=>{e.preventDefault();setTimeout(()=>{window.location.href='https://jiminhur.github.io/RSD3_jimin.h.k_Collection/';},300);});
+  /* RIGHT side (btn-stay DOM position) — always navigates forward regardless of label shown */
+  bs.addEventListener('click',e=>{
+    e.preventDefault();
+    setTimeout(()=>{window.location.href='https://jiminhur.github.io/RSD3_jimin.h.k_Collection/';},300);
+  });
 }
 
 function updateExit(){
@@ -975,48 +955,51 @@ function updateExit(){
   const beD=MX>0?Math.hypot(beR.left+beR.width/2-MX,beR.top+beR.height/2-MY):999;
   const bsD=MX>0?Math.hypot(bsR.left+bsR.width/2-MX,bsR.top+bsR.height/2-MY):999;
 
-  const eFold=MX>0&&beD<280?Math.max(0,(280-beD)/280):0;
-  const sFold=MX>0&&bsD<280?Math.max(0,(280-bsD)/280):0;
+  const eFold=MX>0&&beD<300?Math.max(0,(300-beD)/300):0;
+  const sFold=MX>0&&bsD<300?Math.max(0,(300-bsD)/300):0;
   DATA.exit.efold=lerp(DATA.exit.efold,eFold,0.09);
   DATA.exit.sfold=lerp(DATA.exit.sfold,sFold,0.09);
 
-  /* ── EXIT button ──
-     When cursor approaches EXIT: EXIT folds deeply away.
-     Oscillation adds spatial tension. */
-  const eDepth = DATA.exit.efold*-130 + Math.sin(T*0.35)*DATA.exit.efold*35;
-  const eAng   = DATA.exit.efold*-78;
+  /* ── DECEPTIVE LABEL SWAP ──
+     When cursor approaches EXIT → label switches to "STAY"
+     When cursor approaches STAY → label switches to "EXIT"
+     Swap triggers when fold > 0.35 threshold. */
+  const exitSwap = DATA.exit.efold > 0.35;
+  const staySwap = DATA.exit.sfold > 0.35;
+  be.textContent = exitSwap ? 'STAY' : 'EXIT';
+  bs.textContent = staySwap ? 'EXIT' : 'STAY';
 
-  /* When STAY is approached, EXIT surges forward — aggressively but less than STAY */
-  const eForwardFromStay = DATA.exit.sfold*160;
+  /* ── LEFT button (visually EXIT) ── */
+  const eDepth = DATA.exit.efold*-150 + Math.sin(T*0.35)*DATA.exit.efold*40;
+  const eAng   = DATA.exit.efold*-80;
+  const eForwardFromStay = DATA.exit.sfold*260;
 
   be.style.transformOrigin='left center';
   be.style.transition='none';
   const dominant_stay = DATA.exit.sfold > DATA.exit.efold;
   if(dominant_stay){
-    /* Cursor on STAY: EXIT surges forward */
-    be.style.transform=`perspective(700px) translateZ(${eForwardFromStay}px) rotateY(${DATA.exit.sfold*18}deg) scale(${1+DATA.exit.sfold*0.18})`;
+    be.style.transform=`perspective(600px) translateZ(${eForwardFromStay}px) rotateY(${DATA.exit.sfold*22}deg) scale(${1+DATA.exit.sfold*0.3})`;
   } else {
-    be.style.transform=`perspective(900px) rotateY(${eAng}deg) translateZ(${eDepth}px) scaleY(${1-DATA.exit.efold*0.06})`;
+    be.style.transform=`perspective(900px) rotateY(${eAng}deg) translateZ(${eDepth}px) scaleY(${1-DATA.exit.efold*0.07})`;
   }
 
-  /* ── STAY button — system-preferred, responds much more aggressively ──
-     When EXIT is approached: STAY surges dramatically toward viewer.
-     translateZ +320px, scale 1.6× — nearly doubles in apparent size.
-     Slight rotateY tilt gives it architectural 3D feel. */
-  const stayPushZ  = DATA.exit.efold*320;
-  const stayPushSc = 1 + DATA.exit.efold*0.55;
-  const stayTilt   = DATA.exit.efold*-28;
+  /* ── RIGHT button (visually STAY) — system-preferred, massively dominant ──
+     When EXIT approached: RIGHT surges toward viewer at Z+600, scale 2.2×.
+     Architectural extrusion — fills nearly the entire screen frame.
+     When STAY directly approached: folds away (same recession). */
+  const stayPushZ  = DATA.exit.efold*600;       /* massive forward surge */
+  const stayPushSc = 1 + DATA.exit.efold*1.1;   /* up to 2.1× scale */
+  const stayTilt   = DATA.exit.efold*-32;
 
-  /* When STAY directly approached: STAY folds away (same recession logic) */
-  const sDepth = DATA.exit.sfold*-130 + Math.sin(T*0.35+Math.PI)*DATA.exit.sfold*35;
-  const sAng   = DATA.exit.sfold*76;
+  const sDepth = DATA.exit.sfold*-150 + Math.sin(T*0.35+Math.PI)*DATA.exit.sfold*40;
+  const sAng   = DATA.exit.sfold*78;
 
   bs.style.transformOrigin='right center';
   bs.style.transition='none';
   const dominant_exit = DATA.exit.efold > DATA.exit.sfold;
   if(dominant_exit){
-    /* Cursor on EXIT: STAY surges massively forward — spatially oppressive */
-    bs.style.transform=`perspective(700px) translateZ(${stayPushZ}px) rotateY(${stayTilt}deg) scale(${stayPushSc})`;
+    /* EXIT hovered: RIGHT surges massively — spatially overwhelming */
+    bs.style.transform=`perspective(600px) translateZ(${stayPushZ}px) rotateY(${stayTilt}deg) scale(${stayPushSc})`;
   } else {
     bs.style.transform=`perspective(900px) rotateY(${sAng}deg) translateZ(${sDepth}px)`;
   }
